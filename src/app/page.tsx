@@ -2,46 +2,43 @@
 
 import { motion } from 'motion/react';
 import { Dna, Fingerprint, Network, AlignCenter, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
 
 export default function Home() {
   const [isDoctor, setIsDoctor] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+
+  // Auto-redirect if already authenticated (keep-logged-in)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is already signed in — redirect to their last-used dashboard
+        const savedRole = localStorage.getItem('medical-intake-role');
+        router.push(savedRole === 'doctor' ? '/doctor' : '/patient');
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      // Check if user already exists in Firestore
-      const userRef = doc(db, 'users', user.uid);
-      const userSnap = await getDoc(userRef);
+      await signInWithPopup(auth, provider);
 
-      let finalRole = isDoctor ? 'doctor' : 'patient';
+      // Persist the role choice so returning users get auto-routed correctly
+      localStorage.setItem('medical-intake-role', isDoctor ? 'doctor' : 'patient');
 
-      if (userSnap.exists()) {
-        // Use the existing role from the database instead of the toggle
-        finalRole = userSnap.data().role;
-      } else {
-        // Save new user to Firestore
-        await setDoc(userRef, {
-          name: user.displayName,
-          email: user.email,
-          role: finalRole,
-          createdAt: new Date().toISOString()
-        });
-      }
-
-      // Route based on actual authorized role
-      if (finalRole === 'doctor') {
+      // Route based on the selected toggle
+      if (isDoctor) {
         router.push('/doctor');
       } else {
         router.push('/patient');
@@ -52,6 +49,18 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  // Show a loading state while checking if the user is already logged in
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 font-sans">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex absolute inset-0 w-full z-10 bg-slate-50 text-slate-600 font-display selection:bg-indigo-500/20">

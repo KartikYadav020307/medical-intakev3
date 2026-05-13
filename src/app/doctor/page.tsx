@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from '../../../lib/firebase'; // Actually I can just import auth directly for now
 import { auth } from '../../../lib/firebase';
 import { useRouter } from 'next/navigation';
 
