@@ -1,32 +1,93 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CloudUpload } from "lucide-react";
-import { useState } from "react";
+import { CloudUpload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useRef, useState } from "react";
+import { supabase } from "../../../../lib/supabase";
 
-export default function UploadHero() {
+interface UploadHeroProps {
+  onUploadComplete?: (downloadUrl: string) => void;
+}
+
+export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (file: File) => {
+    if (isUploading) return;
+
+    setIsUploading(true);
+    setUploadedFileName(null);
+    setUploadError(null);
+
+    try {
+      const fileName = `${Date.now()}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("records")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("records")
+        .getPublicUrl(fileName);
+
+      setUploadedFileName(file.name);
+      onUploadComplete?.(urlData.publicUrl);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      const msg =
+        err instanceof Error ? err.message : "Upload failed. Please try again.";
+      setUploadError(msg);
+      setUploadedFileName(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Determine icon + status text
+  const StatusIcon = isUploading
+    ? Loader2
+    : uploadError
+      ? AlertCircle
+      : uploadedFileName
+        ? CheckCircle2
+        : CloudUpload;
+
+  const iconClass = isUploading
+    ? "text-primary animate-spin"
+    : uploadError
+      ? "text-error"
+      : uploadedFileName
+        ? "text-clinical-verified"
+        : "text-primary";
 
   return (
     <motion.div
-      initial={{ y: 20, opacity: 0 }}
+      initial={{ y: 12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="lg:col-span-2 bg-surface rounded-xl border border-document-border p-8 flex flex-col relative overflow-hidden group"
+      transition={{ duration: 0.4, delay: 0.15 }}
     >
-      {/* Ambient glow decoration */}
-      <div className="absolute right-0 top-0 w-64 h-64 bg-primary-container/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileUpload(file);
+          e.target.value = "";
+        }}
+      />
 
-      <h1 className="text-headline-xl text-on-surface mb-2 relative z-10">
-        Build Your Digital Twin
-      </h1>
-      <p className="text-body-main text-on-surface-variant max-w-lg mb-8 relative z-10">
-        Securely upload MRI discs, analog lab reports, or handwritten
-        prescriptions. Our audit engine will instantly verify facts and construct
-        a chronological, error-free medical history.
-      </p>
-
-      {/* Drop Zone */}
+      {/* Compact horizontal drop zone */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -36,26 +97,82 @@ export default function UploadHero() {
         onDrop={(e) => {
           e.preventDefault();
           setIsDragOver(false);
-          // Future: handle file upload
+          const file = e.dataTransfer.files[0];
+          if (file) handleFileUpload(file);
         }}
-        className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer w-full mt-auto relative z-10 ${
-          isDragOver
-            ? "border-primary bg-primary/5 scale-[1.01]"
-            : "border-outline-variant hover:border-primary bg-surface-container-low/50"
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        className={`relative h-28 rounded-xl border-2 border-dashed flex items-center gap-5 px-6 cursor-pointer transition-all duration-300 overflow-hidden ${
+          uploadError
+            ? "border-error bg-error-container/10"
+            : isDragOver
+              ? "border-primary bg-primary/5 scale-[1.005]"
+              : "border-outline-variant hover:border-primary bg-surface"
         }`}
       >
+        {/* Ambient glow */}
+        <div className="absolute right-0 top-0 w-48 h-48 bg-primary-container/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+        {/* Icon */}
         <motion.div
-          animate={isDragOver ? { y: -4, scale: 1.1 } : { y: 0, scale: 1 }}
+          animate={isDragOver ? { y: -3, scale: 1.15 } : { y: 0, scale: 1 }}
           transition={{ type: "spring", stiffness: 300 }}
+          className="shrink-0 relative z-10"
         >
-          <CloudUpload className="w-12 h-12 text-primary mb-4" strokeWidth={1.5} />
+          <StatusIcon className={`w-9 h-9 ${iconClass}`} strokeWidth={1.5} />
         </motion.div>
-        <span className="text-headline-md text-on-surface mb-1">
-          Upload New Record
-        </span>
-        <span className="text-body-sm text-on-surface-variant">
-          Drag and drop PDFs, images, or ZIP files here, or click to browse.
-        </span>
+
+        {/* Text */}
+        <div className="flex flex-col min-w-0 relative z-10">
+          {isUploading ? (
+            <>
+              <span className="text-body-sm font-semibold text-on-surface">
+                Uploading...
+              </span>
+              <span className="text-citation-code text-on-surface-variant">
+                Sending file to secure storage.
+              </span>
+            </>
+          ) : uploadError ? (
+            <>
+              <span className="text-body-sm font-semibold text-error">
+                Upload Failed
+              </span>
+              <span className="text-citation-code text-error/80 truncate">
+                {uploadError}
+              </span>
+              <span className="text-citation-code text-on-surface-variant mt-0.5">
+                Click to try again.
+              </span>
+            </>
+          ) : uploadedFileName ? (
+            <>
+              <span className="text-body-sm font-semibold text-on-surface truncate">
+                {uploadedFileName}
+              </span>
+              <span className="text-citation-code text-clinical-verified">
+                Uploaded — analyzing document.
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-body-sm font-semibold text-on-surface">
+                Upload New Record
+              </span>
+              <span className="text-citation-code text-on-surface-variant">
+                Drag & drop a PDF here, or click to browse.
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Right-side button hint */}
+        {!isUploading && !uploadedFileName && !uploadError && (
+          <div className="ml-auto shrink-0 relative z-10">
+            <span className="px-4 py-2 rounded-lg bg-primary text-on-primary text-body-sm font-semibold pointer-events-none">
+              Browse Files
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   );
