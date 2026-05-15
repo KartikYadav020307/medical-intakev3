@@ -64,10 +64,9 @@ export default function ExtractedDataCards({
 
   const confidenceBadge = (level: "High" | "Medium" | "Low") => {
     const styles = {
-      High: "bg-clinical-verified/15 text-clinical-verified border-clinical-verified/30",
-      Medium:
-        "bg-citation-highlight/40 text-on-surface border-citation-border/50",
-      Low: "bg-error-container/40 text-error border-error/20",
+      High: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm",
+      Medium: "bg-amber-50 text-amber-700 border-amber-200 shadow-sm",
+      Low: "bg-red-50 text-red-700 border-red-200 shadow-sm",
     };
     return (
       <span
@@ -85,16 +84,18 @@ export default function ExtractedDataCards({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.5 }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* ── Diagnoses ── */}
-        <div className="bg-surface rounded-xl border border-document-border p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Stethoscope className="w-4 h-4 text-primary" />
-            <h3 className="text-body-sm font-semibold text-on-surface">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+              <Stethoscope className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 tracking-tight">
               Diagnoses
             </h3>
-            <span className="ml-auto text-citation-code text-on-surface-variant">
-              {data.diagnoses.length} found
+            <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+              {data.diagnoses.length}
             </span>
           </div>
 
@@ -120,14 +121,14 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(d.boundingBox) ? null : d.boundingBox)
               }
-              className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 mb-2 last:mb-0 ${
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
                 isActiveBox(d.boundingBox)
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-document-border hover:border-primary/40 hover:bg-surface-container-low"
+                  ? "border-blue-500 bg-blue-50/50 shadow-[0_0_0_1px_rgba(59,130,246,1)] scale-[1.02]"
+                  : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/30 hover:-translate-y-0.5 hover:shadow-sm"
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-body-sm font-medium text-on-surface">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-sm font-medium text-slate-800 leading-snug">
                   {d.name}
                 </span>
                 {confidenceBadge(d.confidence)}
@@ -137,14 +138,16 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Medications ── */}
-        <div className="bg-surface rounded-xl border border-document-border p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Pill className="w-4 h-4 text-secondary" />
-            <h3 className="text-body-sm font-semibold text-on-surface">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner">
+              <Pill className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 tracking-tight">
               Medications
             </h3>
-            <span className="ml-auto text-citation-code text-on-surface-variant">
-              {data.medications.length} found
+            <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+              {data.medications.length}
             </span>
           </div>
 
@@ -170,17 +173,17 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(m.boundingBox) ? null : m.boundingBox)
               }
-              className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 mb-2 last:mb-0 ${
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
                 isActiveBox(m.boundingBox)
-                  ? "border-secondary bg-secondary/5 shadow-sm"
-                  : "border-document-border hover:border-secondary/40 hover:bg-surface-container-low"
+                  ? "border-amber-500 bg-amber-50/50 shadow-[0_0_0_1px_rgba(245,158,11,1)] scale-[1.02]"
+                  : "border-slate-200 hover:border-amber-300 hover:bg-amber-50/30 hover:-translate-y-0.5 hover:shadow-sm"
               }`}
             >
-              <span className="text-body-sm font-medium text-on-surface block">
+              <span className="text-sm font-medium text-slate-800 block leading-snug">
                 {m.name}
               </span>
               {(m.dosage || m.frequency) && (
-                <span className="text-citation-code text-on-surface-variant mt-1 block">
+                <span className="text-xs font-medium text-slate-500 mt-1.5 block">
                   {[m.dosage, m.frequency].filter(Boolean).join(" · ")}
                 </span>
               )}
@@ -189,14 +192,16 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Lab Results ── */}
-        <div className="bg-surface rounded-xl border border-document-border p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <FlaskConical className="w-4 h-4 text-tertiary" />
-            <h3 className="text-body-sm font-semibold text-on-surface">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
+              <FlaskConical className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 tracking-tight">
               Lab Results
             </h3>
-            <span className="ml-auto text-citation-code text-on-surface-variant">
-              {data.labResults.length} found
+            <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+              {data.labResults.length}
             </span>
           </div>
 
@@ -222,20 +227,20 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(l.boundingBox) ? null : l.boundingBox)
               }
-              className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 mb-2 last:mb-0 ${
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
                 isActiveBox(l.boundingBox)
-                  ? "border-tertiary bg-tertiary/5 shadow-sm"
-                  : "border-document-border hover:border-tertiary/40 hover:bg-surface-container-low"
+                  ? "border-emerald-500 bg-emerald-50/50 shadow-[0_0_0_1px_rgba(16,185,129,1)] scale-[1.02]"
+                  : "border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 hover:-translate-y-0.5 hover:shadow-sm"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-body-sm font-medium text-on-surface">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-800 leading-snug">
                   {l.testName}
                 </span>
-                <span className="text-body-sm font-semibold text-on-surface">
+                <span className="text-sm font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
                   {l.value}
                   {l.unit && (
-                    <span className="text-on-surface-variant font-normal ml-1">
+                    <span className="text-emerald-600/80 font-medium ml-1">
                       {l.unit}
                     </span>
                   )}

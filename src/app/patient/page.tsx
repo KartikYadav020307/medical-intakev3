@@ -91,10 +91,10 @@ export default function PatientDashboard() {
   // ── Loading / auth guards ──────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-unstructured-gray flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-body-sm text-on-surface-variant">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-sm" />
+          <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">
             Loading your health records...
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="bg-unstructured-gray text-on-background font-body antialiased flex min-h-screen">
+    <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((prev) => !prev)}
@@ -128,15 +128,15 @@ export default function PatientDashboard() {
 
           {/* Extraction error banner */}
           {extractionError && (
-            <div className="p-4 bg-error-container/30 border border-error/20 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center shrink-0">
-                <span className="text-error text-lg">!</span>
+            <div className="p-5 bg-red-50 border border-red-100 rounded-2xl shadow-sm flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner">
+                <span className="text-red-600 text-xl font-bold">!</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-body-sm font-semibold text-error">
+                <p className="text-base font-semibold text-red-800 tracking-tight">
                   Extraction Failed
                 </p>
-                <p className="text-body-sm text-error/80 truncate">
+                <p className="text-sm text-red-600/90 truncate mt-0.5">
                   {extractionError}
                 </p>
               </div>
@@ -144,7 +144,7 @@ export default function PatientDashboard() {
                 <button
                   onClick={() => processDocument(loadedPdfUrl)}
                   disabled={isProcessing}
-                  className="px-4 py-2 bg-error text-on-error rounded-lg text-body-sm font-semibold hover:opacity-90 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+                  className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] hover:shadow-[0_4px_15px_-3px_rgba(220,38,38,0.5)] hover:-translate-y-0.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
                 >
                   Retry
                 </button>
@@ -154,43 +154,43 @@ export default function PatientDashboard() {
 
           {/* High-Level Summary */}
           {(extractionData || isProcessing) && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Diagnoses Summary */}
-              <div className="bg-surface rounded-xl border border-document-border p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                  {isProcessing ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" /> : <Stethoscope className="w-5 h-5 text-blue-500" />}
+              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+                  {isProcessing ? <Loader2 className="w-7 h-7 text-blue-600 animate-spin" /> : <Stethoscope className="w-7 h-7 text-blue-600" />}
                 </div>
                 <div>
-                  <p className="text-headline-md text-on-surface leading-none">
+                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
                     {isProcessing ? "-" : extractionData?.diagnoses.length || 0}
                   </p>
-                  <p className="text-body-sm text-on-surface-variant">Diagnoses Found</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
                 </div>
               </div>
 
               {/* Medications Summary */}
-              <div className="bg-surface rounded-xl border border-document-border p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                  {isProcessing ? <Loader2 className="w-5 h-5 text-amber-500 animate-spin" /> : <Pill className="w-5 h-5 text-amber-500" />}
+              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                  {isProcessing ? <Loader2 className="w-7 h-7 text-amber-600 animate-spin" /> : <Pill className="w-7 h-7 text-amber-600" />}
                 </div>
                 <div>
-                  <p className="text-headline-md text-on-surface leading-none">
+                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
                     {isProcessing ? "-" : extractionData?.medications.length || 0}
                   </p>
-                  <p className="text-body-sm text-on-surface-variant">Medications</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
                 </div>
               </div>
 
               {/* Lab Results Summary */}
-              <div className="bg-surface rounded-xl border border-document-border p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                  {isProcessing ? <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" /> : <FlaskConical className="w-5 h-5 text-emerald-500" />}
+              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+                  {isProcessing ? <Loader2 className="w-7 h-7 text-emerald-600 animate-spin" /> : <FlaskConical className="w-7 h-7 text-emerald-600" />}
                 </div>
                 <div>
-                  <p className="text-headline-md text-on-surface leading-none">
+                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
                     {isProcessing ? "-" : extractionData?.labResults.length || 0}
                   </p>
-                  <p className="text-body-sm text-on-surface-variant">Lab Results</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
                 </div>
               </div>
             </div>

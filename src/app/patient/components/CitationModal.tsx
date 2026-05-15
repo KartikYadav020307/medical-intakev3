@@ -31,30 +31,30 @@ export default function CitationModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.96, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="w-[95vw] h-[95vh] bg-surface rounded-xl overflow-hidden flex flex-row relative shadow-2xl"
+          exit={{ opacity: 0, scale: 0.96, y: 20 }}
+          transition={{ type: "spring", stiffness: 400, damping: 35 }}
+          className="w-[96vw] h-[96vh] bg-white rounded-3xl overflow-hidden flex flex-row relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-200/50"
         >
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-[60] cursor-pointer"
+            className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-slate-200 transition-all z-[60] cursor-pointer"
           >
-            <X className="w-6 h-6 text-on-surface" />
+            <X className="w-6 h-6 text-slate-700" />
           </button>
 
           {/* Left Column - Details/Timeline */}
-          <div className="w-[30%] h-full overflow-y-auto border-r border-document-border bg-surface p-6">
-            <h2 className="text-headline-md text-on-surface mb-6">Medical History</h2>
+          <div className="w-[30%] h-full overflow-y-auto border-r border-slate-200/60 bg-slate-50/50 p-8">
+            <h2 className="text-2xl font-semibold text-slate-800 tracking-tight mb-8">Medical History</h2>
             <MedicalTimeline data={extractionData} onItemClick={onItemClick} />
           </div>
 
           {/* Right Column - PDF Viewer */}
-          <div className="w-[70%] h-full bg-gray-100 flex flex-col relative overflow-hidden">
+          <div className="w-[70%] h-full bg-slate-100/50 flex flex-col relative overflow-hidden">
             <PdfViewer
               pdfUrl={pdfUrl}
               activeHighlight={activeHighlight}

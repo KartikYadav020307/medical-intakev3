@@ -61,12 +61,12 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         : CloudUpload;
 
   const iconClass = isUploading
-    ? "text-primary animate-spin"
+    ? "text-blue-600 animate-spin"
     : uploadError
-      ? "text-error"
+      ? "text-red-500"
       : uploadedFileName
-        ? "text-clinical-verified"
-        : "text-primary";
+        ? "text-emerald-600"
+        : "text-blue-600";
 
   return (
     <motion.div
@@ -101,16 +101,16 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
           if (file) handleFileUpload(file);
         }}
         onClick={() => !isUploading && fileInputRef.current?.click()}
-        className={`relative h-28 rounded-xl border-2 border-dashed flex items-center gap-5 px-6 cursor-pointer transition-all duration-300 overflow-hidden ${
+        className={`relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${
           uploadError
-            ? "border-error bg-error-container/10"
+            ? "border-red-300 bg-red-50/50"
             : isDragOver
-              ? "border-primary bg-primary/5 scale-[1.005]"
-              : "border-outline-variant hover:border-primary bg-surface"
+              ? "border-blue-500 bg-blue-50 scale-[1.02] shadow-lg"
+              : "border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/30 shadow-sm hover:shadow-md"
         }`}
       >
         {/* Ambient glow */}
-        <div className="absolute right-0 top-0 w-48 h-48 bg-primary-container/8 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
         {/* Icon */}
         <motion.div
@@ -125,40 +125,40 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         <div className="flex flex-col min-w-0 relative z-10">
           {isUploading ? (
             <>
-              <span className="text-body-sm font-semibold text-on-surface">
+              <span className="text-base font-semibold text-slate-800 tracking-tight">
                 Uploading...
               </span>
-              <span className="text-citation-code text-on-surface-variant">
+              <span className="text-sm font-medium text-slate-500">
                 Sending file to secure storage.
               </span>
             </>
           ) : uploadError ? (
             <>
-              <span className="text-body-sm font-semibold text-error">
+              <span className="text-base font-semibold text-red-600 tracking-tight">
                 Upload Failed
               </span>
-              <span className="text-citation-code text-error/80 truncate">
+              <span className="text-sm font-medium text-red-500 truncate">
                 {uploadError}
               </span>
-              <span className="text-citation-code text-on-surface-variant mt-0.5">
+              <span className="text-sm font-medium text-slate-500 mt-0.5">
                 Click to try again.
               </span>
             </>
           ) : uploadedFileName ? (
             <>
-              <span className="text-body-sm font-semibold text-on-surface truncate">
+              <span className="text-base font-semibold text-slate-800 tracking-tight truncate">
                 {uploadedFileName}
               </span>
-              <span className="text-citation-code text-clinical-verified">
+              <span className="text-sm font-medium text-emerald-600">
                 Uploaded — analyzing document.
               </span>
             </>
           ) : (
             <>
-              <span className="text-body-sm font-semibold text-on-surface">
+              <span className="text-base font-semibold text-slate-800 tracking-tight">
                 Upload New Record
               </span>
-              <span className="text-citation-code text-on-surface-variant">
+              <span className="text-sm font-medium text-slate-500">
                 Drag & drop a PDF here, or click to browse.
               </span>
             </>
@@ -168,7 +168,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         {/* Right-side button hint */}
         {!isUploading && !uploadedFileName && !uploadError && (
           <div className="ml-auto shrink-0 relative z-10">
-            <span className="px-4 py-2 rounded-lg bg-primary text-on-primary text-body-sm font-semibold pointer-events-none">
+            <span className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all pointer-events-none">
               Browse Files
             </span>
           </div>
