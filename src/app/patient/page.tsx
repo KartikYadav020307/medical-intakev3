@@ -7,7 +7,6 @@ import { auth } from "../../../lib/firebase";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import UploadHero from "./components/UploadHero";
-import TimelineSection from "./components/TimelineSection";
 import type { ExtractionData } from "./components/ExtractedDataCards";
 import MedicalTimeline from "./components/MedicalTimeline";
 import { Stethoscope, Pill, FlaskConical, Loader2 } from "lucide-react";
@@ -115,8 +114,8 @@ export default function PatientDashboard() {
 
       {/* Main workspace — margin tracks sidebar width */}
       <main
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
-          sidebarCollapsed ? "ml-16" : "ml-64"
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? "ml-16" : "ml-56"
         }`}
       >
         <TopBar />
@@ -207,8 +206,6 @@ export default function PatientDashboard() {
             />
           )}
 
-          {/* Timeline */}
-          <TimelineSection />
         </div>
       </main>
 
