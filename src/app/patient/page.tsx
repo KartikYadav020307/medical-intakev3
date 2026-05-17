@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../../lib/firebase";
+import { FileUp, FileText, FolderOpen, TrendingUp, Activity } from "lucide-react";
+
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import UploadHero from "./components/UploadHero";
+import { supabase } from "../../../lib/supabase";
 import type { ExtractionData } from "./components/ExtractedDataCards";
 import MedicalTimeline from "./components/MedicalTimeline";
 import { Stethoscope, Pill, FlaskConical, Loader2 } from "lucide-react";
@@ -18,9 +19,75 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
 
 export default function PatientDashboard() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState("upload");
+  const [patientHistory, setPatientHistory] = useState<any[]>([]);
+
+  // ── Derived Master Timeline ─────────────────────────────────────────
+  const masterTimeline = React.useMemo(() => {
+    if (!patientHistory || patientHistory.length === 0) return [];
+    
+    const events: any[] = [];
+    patientHistory.forEach((record) => {
+      const date = new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const data = record.extracted_data;
+      
+      if (data?.diagnoses) {
+        data.diagnoses.forEach((d: any) => {
+          events.push({ type: 'diagnosis', title: d.name, detail: `Confidence: ${d.confidence}`, date, rawDate: record.created_at });
+        });
+      }
+      if (data?.medications) {
+        data.medications.forEach((m: any) => {
+          events.push({ type: 'medication', title: m.name, detail: [m.dosage, m.frequency].filter(Boolean).join(' · '), date, rawDate: record.created_at });
+        });
+      }
+      if (data?.labResults) {
+        data.labResults.forEach((l: any) => {
+          events.push({ type: 'lab', title: l.testName, detail: `${l.value} ${l.unit || ''}`, date, rawDate: record.created_at });
+        });
+      }
+    });
+    
+    return events.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+  }, [patientHistory]);
+
+  // ── Derived Analytics ───────────────────────────────────────────────
+  const analyticsData = React.useMemo(() => {
+    const totalDiagnoses = masterTimeline.filter(e => e.type === 'diagnosis').length;
+    const totalMedications = masterTimeline.filter(e => e.type === 'medication').length;
+    const totalLabs = masterTimeline.filter(e => e.type === 'lab').length;
+    
+    const recentActivity = masterTimeline
+      .filter(e => e.type === 'diagnosis' || e.type === 'medication')
+      .slice(0, 5);
+
+    return { totalDiagnoses, totalMedications, totalLabs, recentActivity };
+  }, [masterTimeline]);
+
+  // ── Fetch Patient History ──────────────────────────────────────────
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from("medical_records")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (error) throw error;
+          if (data) setPatientHistory(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch patient history:", err);
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   // ── Extraction state ───────────────────────────────────────────────
   const [loadedPdfUrl, setLoadedPdfUrl] = useState<string | null>(null);
@@ -34,18 +101,7 @@ export default function PatientDashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
 
-  // ── Auth guard ─────────────────────────────────────────────────────
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push("/");
-      } else {
-        setAuthenticated(true);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [router]);
+
 
   // ── Core extraction function ───────────────────────────────────────
   const processDocument = useCallback(async (pdfUrl: string) => {
@@ -68,6 +124,20 @@ export default function PatientDashboard() {
       }
 
       setExtractionData(result.data);
+
+      // Safe DB Injection
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('medical_records').insert([{
+            user_id: user.id,
+            pdf_url: pdfUrl,
+            extracted_data: result.data
+          }]);
+        }
+      } catch (dbError) {
+        console.error("Failed to save medical record to database:", dbError);
+      }
     } catch (err) {
       console.error("Document extraction failed:", err);
       setExtractionError(
@@ -87,29 +157,15 @@ export default function PatientDashboard() {
     [processDocument],
   );
 
-  // ── Loading / auth guards ──────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-sm" />
-          <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">
-            Loading your health records...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
-  if (!authenticated) {
-    return null;
-  }
 
   return (
     <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((prev) => !prev)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       {/* Main workspace — margin tracks sidebar width */}
@@ -122,8 +178,10 @@ export default function PatientDashboard() {
 
         {/* Single-column dashboard canvas */}
         <div className="p-8 flex flex-col gap-5 max-w-5xl mx-auto w-full">
-          {/* Compact upload zone */}
-          <UploadHero onUploadComplete={handleUploadComplete} />
+          {activeTab === "upload" && (
+            <>
+              {/* Compact upload zone */}
+              <UploadHero onUploadComplete={handleUploadComplete} />
 
           {/* Extraction error banner */}
           {extractionError && (
@@ -204,6 +262,203 @@ export default function PatientDashboard() {
                 setIsModalOpen(true);
               }}
             />
+          )}
+          </>)}
+
+          {activeTab === "records" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upload History</h2>
+                <p className="text-slate-500 text-sm mt-1">Review your previously processed medical documents.</p>
+              </div>
+              
+              {patientHistory.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
+                  <p className="text-slate-500">No records found. Head to the Upload tab to process your first document.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {patientHistory.map((record) => {
+                    const data = record.extracted_data;
+                    const dCount = data?.diagnoses?.length || 0;
+                    const mCount = data?.medications?.length || 0;
+                    const lCount = data?.labResults?.length || 0;
+                    
+                    return (
+                      <div key={record.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors shadow-inner">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                          <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+                            {new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-slate-800 truncate">Document Record</h3>
+                        <p className="text-sm text-slate-500 mt-2 line-clamp-2">
+                          Contains <span className="font-medium text-slate-700">{dCount}</span> diagnoses, <span className="font-medium text-slate-700">{mCount}</span> medications, and <span className="font-medium text-slate-700">{lCount}</span> labs.
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "timeline" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Master Timeline</h2>
+                <p className="text-slate-500 text-sm mt-1">A unified chronological view of all extracted medical events.</p>
+              </div>
+
+              {masterTimeline.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
+                  <p className="text-slate-500">No events found in your history.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 relative before:absolute before:inset-y-2 before:left-[1.35rem] before:w-px before:bg-slate-200">
+                  {masterTimeline.map((event, idx) => (
+                    <div key={idx} className="flex gap-6 items-start relative z-10 group">
+                      {/* Icon Node */}
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_0_4px_#faf8ff] border-2 border-white ${event.type === 'diagnosis' ? 'bg-blue-100 text-blue-600' : event.type === 'medication' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {event.type === 'diagnosis' && <Stethoscope className="w-5 h-5" />}
+                        {event.type === 'medication' && <Pill className="w-5 h-5" />}
+                        {event.type === 'lab' && <FlaskConical className="w-5 h-5" />}
+                      </div>
+
+                      {/* Content Card */}
+                      <div className="flex-1 bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
+                            event.type === 'diagnosis' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                            event.type === 'medication' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          }`}>
+                            {event.type}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                            {event.date}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-semibold text-slate-800 leading-snug">{event.title}</h4>
+                        {event.detail && (
+                          <p className="text-sm text-slate-500 mt-1">{event.detail}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "analytics" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Health Analytics</h2>
+                <p className="text-slate-500 text-sm mt-1">Aggregate insights across your entire medical history.</p>
+              </div>
+
+              {patientHistory.length === 0 ? (
+                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm flex flex-col items-center">
+                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100 text-slate-400">
+                    <Activity className="w-8 h-8" />
+                  </div>
+                  <p className="text-slate-500 font-medium">No data available for analytics.</p>
+                  <p className="text-slate-400 text-sm mt-1">Upload a medical document to generate your health insights.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-8">
+                  {/* Top Level Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+                        <Stethoscope className="w-7 h-7 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                          {analyticsData.totalDiagnoses}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                        <Pill className="w-7 h-7 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                          {analyticsData.totalMedications}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+                        <FlaskConical className="w-7 h-7 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                          {analyticsData.totalLabs}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health Insights Section */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 px-2">
+                      <TrendingUp className="w-5 h-5 text-slate-600" />
+                      <h3 className="text-lg font-bold text-slate-800">Recent Activity & Trends</h3>
+                    </div>
+                    
+                    <div className="bg-white rounded-3xl border border-slate-200/60 overflow-hidden shadow-sm">
+                      {analyticsData.recentActivity.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 text-sm">No recent diagnoses or medications found.</div>
+                      ) : (
+                        <div className="flex flex-col divide-y divide-slate-100">
+                          {analyticsData.recentActivity.map((activity: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner border ${
+                                  activity.type === 'diagnosis' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                                }`}>
+                                  {activity.type === 'diagnosis' ? <Stethoscope className="w-5 h-5" /> : <Pill className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-slate-800">{activity.title}</p>
+                                  <p className="text-xs font-medium text-slate-500 mt-0.5">{activity.detail}</p>
+                                </div>
+                              </div>
+                              <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                {activity.date}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(!["upload", "records", "timeline", "analytics"].includes(activeTab)) && (
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200/60 shadow-sm mt-8 animate-in fade-in duration-500">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
+                <FolderOpen className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 tracking-tight capitalize">{activeTab} View</h3>
+              <p className="text-slate-500 text-sm mt-1 max-w-sm text-center">
+                This view is part of the next phase. You currently have <span className="font-semibold text-slate-700">{patientHistory.length}</span> saved records in the database.
+              </p>
+            </div>
           )}
 
         </div>

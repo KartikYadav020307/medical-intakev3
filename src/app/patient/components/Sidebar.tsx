@@ -9,28 +9,32 @@ import {
   HelpCircle,
   LogOut,
   Menu,
+  FileUp,
 } from "lucide-react";
-import { auth } from "../../../../lib/firebase";
+import { supabase } from "../../../../lib/supabase";
 import { useRouter } from "next/navigation";
 
 const navItems = [
-  { icon: FolderOpen, label: "Records", active: true },
-  { icon: CalendarDays, label: "Timeline", active: false },
-  { icon: BarChart3, label: "Analytics", active: false },
-  { icon: ShieldCheck, label: "Verification", active: false },
+  { icon: FileUp, label: "Upload", id: "upload" },
+  { icon: FolderOpen, label: "Records", id: "records" },
+  { icon: CalendarDays, label: "Timeline", id: "timeline" },
+  { icon: BarChart3, label: "Analytics", id: "analytics" },
+  { icon: ShieldCheck, label: "Verification", id: "verification" },
 ];
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  activeTab: string;
+  onTabChange: (id: string) => void;
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange }: SidebarProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await auth.signOut();
-    router.push("/");
+    await supabase.auth.signOut();
+    router.push("/login");
   };
 
   return (
@@ -56,12 +60,16 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className="flex-1 flex flex-col gap-2 px-3 overflow-y-auto overflow-x-hidden">
         {navItems.map((item) => (
           <a
-            key={item.label}
+            key={item.id}
+            onClick={(e) => {
+              e.preventDefault();
+              onTabChange(item.id);
+            }}
             href="#"
             title={collapsed ? item.label : undefined}
-            className={`flex items-center rounded-lg overflow-hidden transition-colors duration-200 cursor-pointer active:scale-95 h-10 w-full px-2.5 ${item.active
-                ? "bg-primary-container text-on-primary-container font-semibold"
-                : "text-on-surface-variant hover:bg-surface-variant"
+            className={`flex items-center rounded-lg overflow-hidden transition-all duration-200 cursor-pointer active:scale-95 h-10 w-full px-2.5 ${activeTab === item.id
+                ? "bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100/50"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
               }`}
           >
             <item.icon className="w-5 h-5 shrink-0" />
