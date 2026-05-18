@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { FileUp, FileText, FolderOpen, TrendingUp, Activity } from "lucide-react";
+import { FileText, FolderOpen, TrendingUp, Activity } from "lucide-react";
 
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
@@ -17,51 +16,96 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
   ssr: false,
 });
 
-export default function PatientDashboard() {
-  const router = useRouter();
+type MedicalRecord = {
+  id: string;
+  created_at: string;
+  extracted_data?: Partial<ExtractionData> | null;
+};
 
+type MasterTimelineEvent = {
+  type: "diagnosis" | "medication" | "lab";
+  title: string;
+  detail: string;
+  date: string;
+  rawDate: string;
+};
+
+export default function PatientDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("upload");
-  const [patientHistory, setPatientHistory] = useState<any[]>([]);
+  const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
 
   // ── Derived Master Timeline ─────────────────────────────────────────
   const masterTimeline = React.useMemo(() => {
     if (!patientHistory || patientHistory.length === 0) return [];
     
-    const events: any[] = [];
+    const events: MasterTimelineEvent[] = [];
+    const uniqueEvents = new Map<string, MasterTimelineEvent>();
+    const getEventKey = (event: MasterTimelineEvent) =>
+      `${event.type}:${event.title.trim().toLowerCase()}`;
     patientHistory.forEach((record) => {
       const date = new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const data = record.extracted_data;
       
       if (data?.diagnoses) {
-        data.diagnoses.forEach((d: any) => {
+        data.diagnoses.forEach((d) => {
           events.push({ type: 'diagnosis', title: d.name, detail: `Confidence: ${d.confidence}`, date, rawDate: record.created_at });
         });
       }
       if (data?.medications) {
-        data.medications.forEach((m: any) => {
+        data.medications.forEach((m) => {
           events.push({ type: 'medication', title: m.name, detail: [m.dosage, m.frequency].filter(Boolean).join(' · '), date, rawDate: record.created_at });
         });
       }
       if (data?.labResults) {
-        data.labResults.forEach((l: any) => {
+        data.labResults.forEach((l) => {
           events.push({ type: 'lab', title: l.testName, detail: `${l.value} ${l.unit || ''}`, date, rawDate: record.created_at });
         });
       }
     });
+
+    events.forEach((event) => {
+      const key = getEventKey(event);
+      const existing = uniqueEvents.get(key);
+
+      if (!existing || new Date(event.rawDate).getTime() > new Date(existing.rawDate).getTime()) {
+        uniqueEvents.set(key, event);
+      }
+    });
     
-    return events.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+    return Array.from(uniqueEvents.values()).sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
   }, [patientHistory]);
 
   // ── Derived Analytics ───────────────────────────────────────────────
   const analyticsData = React.useMemo(() => {
-    const totalDiagnoses = masterTimeline.filter(e => e.type === 'diagnosis').length;
-    const totalMedications = masterTimeline.filter(e => e.type === 'medication').length;
-    const totalLabs = masterTimeline.filter(e => e.type === 'lab').length;
+    const uniqueDiagnoses = new Set<string>();
+    const uniqueMedications = new Set<string>();
+    const uniqueLabs = new Set<string>();
+    const uniqueRecentActivity = new Map<string, MasterTimelineEvent>();
+
+    masterTimeline.forEach((event) => {
+      const key = `${event.type}:${event.title.trim().toLowerCase()}`;
+
+      if (event.type === 'diagnosis') {
+        uniqueDiagnoses.add(key);
+        if (!uniqueRecentActivity.has(key)) {
+          uniqueRecentActivity.set(key, event);
+        }
+      } else if (event.type === 'medication') {
+        uniqueMedications.add(key);
+        if (!uniqueRecentActivity.has(key)) {
+          uniqueRecentActivity.set(key, event);
+        }
+      } else if (event.type === 'lab') {
+        uniqueLabs.add(key);
+      }
+    });
+
+    const totalDiagnoses = uniqueDiagnoses.size;
+    const totalMedications = uniqueMedications.size;
+    const totalLabs = uniqueLabs.size;
     
-    const recentActivity = masterTimeline
-      .filter(e => e.type === 'diagnosis' || e.type === 'medication')
-      .slice(0, 5);
+    const recentActivity = Array.from(uniqueRecentActivity.values()).slice(0, 5);
 
     return { totalDiagnoses, totalMedications, totalLabs, recentActivity };
   }, [masterTimeline]);
@@ -79,7 +123,7 @@ export default function PatientDashboard() {
             .order("created_at", { ascending: false });
 
           if (error) throw error;
-          if (data) setPatientHistory(data);
+          if (data) setPatientHistory(data as MedicalRecord[]);
         }
       } catch (err) {
         console.error("Failed to fetch patient history:", err);
@@ -157,7 +201,46 @@ export default function PatientDashboard() {
     [processDocument],
   );
 
+  const renderMasterTimeline = () => (
+    masterTimeline.length === 0 ? (
+      <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
+        <p className="text-slate-500">No events found in your history.</p>
+      </div>
+    ) : (
+      <div className="flex flex-col gap-4 relative before:absolute before:inset-y-2 before:left-[1.35rem] before:w-px before:bg-slate-200">
+        {masterTimeline.map((event, idx) => (
+          <div key={idx} className="flex gap-6 items-start relative z-10 group">
+            {/* Icon Node */}
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_0_4px_#faf8ff] border-2 border-white ${event.type === 'diagnosis' ? 'bg-blue-100 text-blue-600' : event.type === 'medication' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+              {event.type === 'diagnosis' && <Stethoscope className="w-5 h-5" />}
+              {event.type === 'medication' && <Pill className="w-5 h-5" />}
+              {event.type === 'lab' && <FlaskConical className="w-5 h-5" />}
+            </div>
 
+            {/* Content Card */}
+            <div className="flex-1 bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="flex justify-between items-start mb-2">
+                <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
+                  event.type === 'diagnosis' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                  event.type === 'medication' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                  'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                }`}>
+                  {event.type}
+                </span>
+                <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                  {event.date}
+                </span>
+              </div>
+              <h4 className="text-base font-semibold text-slate-800 leading-snug">{event.title}</h4>
+              {event.detail && (
+                <p className="text-sm text-slate-500 mt-1">{event.detail}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  );
 
   return (
     <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
@@ -263,6 +346,17 @@ export default function PatientDashboard() {
               }}
             />
           )}
+
+              <hr className="my-8 border-slate-200" />
+
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Recent Medical History</h2>
+                  <p className="text-slate-500 text-sm mt-1">A unified chronological view of all extracted medical events.</p>
+                </div>
+
+                {renderMasterTimeline()}
+              </div>
           </>)}
 
           {activeTab === "records" && (
@@ -313,44 +407,7 @@ export default function PatientDashboard() {
                 <p className="text-slate-500 text-sm mt-1">A unified chronological view of all extracted medical events.</p>
               </div>
 
-              {masterTimeline.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
-                  <p className="text-slate-500">No events found in your history.</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4 relative before:absolute before:inset-y-2 before:left-[1.35rem] before:w-px before:bg-slate-200">
-                  {masterTimeline.map((event, idx) => (
-                    <div key={idx} className="flex gap-6 items-start relative z-10 group">
-                      {/* Icon Node */}
-                      <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_0_4px_#faf8ff] border-2 border-white ${event.type === 'diagnosis' ? 'bg-blue-100 text-blue-600' : event.type === 'medication' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                        {event.type === 'diagnosis' && <Stethoscope className="w-5 h-5" />}
-                        {event.type === 'medication' && <Pill className="w-5 h-5" />}
-                        {event.type === 'lab' && <FlaskConical className="w-5 h-5" />}
-                      </div>
-
-                      {/* Content Card */}
-                      <div className="flex-1 bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
-                            event.type === 'diagnosis' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                            event.type === 'medication' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          }`}>
-                            {event.type}
-                          </span>
-                          <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                            {event.date}
-                          </span>
-                        </div>
-                        <h4 className="text-base font-semibold text-slate-800 leading-snug">{event.title}</h4>
-                        {event.detail && (
-                          <p className="text-sm text-slate-500 mt-1">{event.detail}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {renderMasterTimeline()}
             </div>
           )}
 
@@ -422,7 +479,7 @@ export default function PatientDashboard() {
                         <div className="p-8 text-center text-slate-500 text-sm">No recent diagnoses or medications found.</div>
                       ) : (
                         <div className="flex flex-col divide-y divide-slate-100">
-                          {analyticsData.recentActivity.map((activity: any, idx: number) => (
+                          {analyticsData.recentActivity.map((activity, idx) => (
                             <div key={idx} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
                               <div className="flex items-center gap-4">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner border ${

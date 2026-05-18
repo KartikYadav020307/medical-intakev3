@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { Loader2, Mail, Lock, ShieldCheck } from "lucide-react";
@@ -12,6 +12,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const redirectAuthenticatedUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        router.replace("/patient");
+      }
+    };
+
+    redirectAuthenticatedUser();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +48,8 @@ export default function LoginPage() {
         if (error) throw error;
         router.push("/patient");
       }
-    } catch (err: any) {
-      setError(err.message || "Invalid credentials");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setIsLoading(false);
     }
