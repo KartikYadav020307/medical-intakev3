@@ -16,7 +16,7 @@ interface CitationModalProps {
   pdfUrl: string | null;
   activeHighlight: [number, number, number, number] | null;
   extractionData: ExtractionData | null;
-  onItemClick: (boundingBox: [number, number, number, number]) => void;
+  onItemClick: (boundingBox: [number, number, number, number] | null) => void;
 }
 
 export default function CitationModal({
@@ -58,7 +58,7 @@ export default function CitationModal({
             <PdfViewer
               pdfUrl={pdfUrl}
               activeHighlight={activeHighlight}
-              onClearHighlight={() => onItemClick(null as any)}
+              onClearHighlight={() => onItemClick(null)}
             />
           </div>
         </motion.div>

@@ -2,20 +2,43 @@
 
 import { motion } from "motion/react";
 import { Search, Bell, Settings, FileDown, Share2 } from "lucide-react";
-import { auth } from "../../../../lib/firebase";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../../../lib/supabase";
 
 export default function TopBar() {
+  const router = useRouter();
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setPhotoURL(user.photoURL);
-      setDisplayName(user.displayName || "User");
-    }
+    let isMounted = true;
+
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!isMounted || !user) return;
+
+      const metadata = user.user_metadata as Record<string, unknown>;
+      const avatar = metadata.avatar_url ?? metadata.picture;
+      const name = metadata.full_name ?? metadata.name;
+
+      setPhotoURL(typeof avatar === "string" ? avatar : null);
+      setDisplayName(
+        typeof name === "string" && name.trim() ? name : user.email ?? "User"
+      );
+    };
+
+    loadUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+
 
   return (
     <motion.header
@@ -63,11 +86,13 @@ export default function TopBar() {
         {photoURL ? (
           <img
             alt={displayName}
-            className="w-9 h-9 rounded-full border border-document-border object-cover ml-2 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
+            className="w-9 h-9 rounded-full border border-document-border object-cover ml-2 transition-all"
             src={photoURL}
           />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center ml-2 cursor-pointer text-sm font-semibold hover:ring-2 hover:ring-primary/30 transition-all">
+          <div
+            className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center ml-2 text-sm font-semibold transition-all"
+          >
             {displayName.charAt(0).toUpperCase()}
           </div>
         )}

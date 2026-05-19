@@ -9,6 +9,8 @@ import UploadHero from "./components/UploadHero";
 import { supabase } from "../../../lib/supabase";
 import type { ExtractionData } from "./components/ExtractedDataCards";
 import MedicalTimeline from "./components/MedicalTimeline";
+import TimelineSection from "./components/TimelineSection";
+import ProcessingTracker from "./components/ProcessingTracker";
 import { Stethoscope, Pill, FlaskConical, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -144,7 +146,20 @@ export default function PatientDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
+  useEffect(() => {
+    if (!toast) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
 
   // ── Core extraction function ───────────────────────────────────────
@@ -161,9 +176,13 @@ export default function PatientDashboard() {
         body: JSON.stringify({ pdfUrl }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Extraction failed: ${response.statusText}`);
+      }
+
       const result = await response.json();
 
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || "Extraction failed.");
       }
 
@@ -172,15 +191,22 @@ export default function PatientDashboard() {
       // Safe DB Injection
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('medical_records').insert([{
-            user_id: user.id,
-            pdf_url: pdfUrl,
-            extracted_data: result.data
-          }]);
+        if (!user) {
+          throw new Error("No authenticated user found for database save.");
         }
+
+        const { error: insertError } = await supabase.from('medical_records').insert([{
+          user_id: user.id,
+          pdf_url: pdfUrl,
+          extracted_data: result.data
+        }]);
+
+        if (insertError) throw insertError;
+
+        setToast({ message: "Saved to secure database", type: "success" });
       } catch (dbError) {
         console.error("Failed to save medical record to database:", dbError);
+        setToast({ message: "Failed to save to database", type: "error" });
       }
     } catch (err) {
       console.error("Document extraction failed:", err);
@@ -207,43 +233,40 @@ export default function PatientDashboard() {
         <p className="text-slate-500">No events found in your history.</p>
       </div>
     ) : (
-      <div className="flex flex-col gap-4 relative before:absolute before:inset-y-2 before:left-[1.35rem] before:w-px before:bg-slate-200">
-        {masterTimeline.map((event, idx) => (
-          <div key={idx} className="flex gap-6 items-start relative z-10 group">
-            {/* Icon Node */}
-            <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_0_4px_#faf8ff] border-2 border-white ${event.type === 'diagnosis' ? 'bg-blue-100 text-blue-600' : event.type === 'medication' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-              {event.type === 'diagnosis' && <Stethoscope className="w-5 h-5" />}
-              {event.type === 'medication' && <Pill className="w-5 h-5" />}
-              {event.type === 'lab' && <FlaskConical className="w-5 h-5" />}
-            </div>
-
-            {/* Content Card */}
-            <div className="flex-1 bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="flex justify-between items-start mb-2">
-                <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider ${
-                  event.type === 'diagnosis' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                  event.type === 'medication' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                  'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                }`}>
-                  {event.type}
-                </span>
-                <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                  {event.date}
-                </span>
-              </div>
-              <h4 className="text-base font-semibold text-slate-800 leading-snug">{event.title}</h4>
-              {event.detail && (
-                <p className="text-sm text-slate-500 mt-1">{event.detail}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <TimelineSection
+        events={masterTimeline.map((event) => ({
+          date: event.date,
+          category: event.type.toUpperCase(),
+          categoryColor:
+            event.type === "diagnosis"
+              ? "bg-blue-100 text-blue-700"
+              : event.type === "medication"
+              ? "bg-amber-100 text-amber-700"
+              : "bg-emerald-100 text-emerald-700",
+          fact: event.title,
+          source: "Master Timeline",
+          citation: event.detail || "General Record",
+        }))}
+      />
     )
   );
 
   return (
     <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
+      {toast && (
+        <div
+          role={toast.type === "error" ? "alert" : "status"}
+          aria-live={toast.type === "error" ? "assertive" : "polite"}
+          className={`fixed right-6 top-6 z-50 max-w-sm rounded-2xl border px-5 py-4 text-sm font-medium shadow-lg ${
+            toast.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((prev) => !prev)}
@@ -265,6 +288,18 @@ export default function PatientDashboard() {
             <>
               {/* Compact upload zone */}
               <UploadHero onUploadComplete={handleUploadComplete} />
+
+          {/* Active Processing Tracker */}
+          {(isProcessing || (loadedPdfUrl && !extractionData && !extractionError)) && (
+             <ProcessingTracker tasks={[{
+                filename: loadedPdfUrl ? loadedPdfUrl.split('/').pop() || "Document" : "Document",
+                status: isProcessing ? "Extracting Facts" : "Queued",
+                statusColor: isProcessing ? "text-blue-600" : "text-slate-500",
+                progress: isProcessing ? 50 : 0,
+                detail: isProcessing ? "Verifying against clinical taxonomy..." : "Ready to process...",
+                active: isProcessing
+             }]} />
+          )}
 
           {/* Extraction error banner */}
           {extractionError && (

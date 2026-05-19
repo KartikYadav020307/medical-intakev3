@@ -3,26 +3,20 @@
 import { motion } from "motion/react";
 import { Check, FileText } from "lucide-react";
 
-const events = [
-  {
-    date: "Oct 12",
-    category: "DIAGNOSIS",
-    categoryColor: "bg-primary-container text-on-primary-container",
-    fact: "Mild L4-L5 disc desiccation noted.",
-    source: "Lumbar Spine MRI Summary",
-    citation: "Page 1, Line 4",
-  },
-  {
-    date: "Sep 28",
-    category: "MEDICATION",
-    categoryColor: "bg-secondary-container text-on-secondary-container",
-    fact: "Cyclobenzaprine 5mg, take 1 PO qHS PRN muscle spasm.",
-    source: "Orthopedic Consult Notes",
-    citation: "Prescription Slip",
-  },
-];
+export interface TimelineEvent {
+  date: string;
+  category: string;
+  categoryColor: string;
+  fact: string;
+  source: string;
+  citation: string;
+}
 
-export default function TimelineSection() {
+export interface TimelineSectionProps {
+  events: TimelineEvent[];
+}
+
+export default function TimelineSection({ events }: TimelineSectionProps) {
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
@@ -52,7 +46,7 @@ export default function TimelineSection() {
       <div className="flex flex-col gap-3 relative before:absolute before:inset-y-0 before:left-[4.5rem] before:w-px before:bg-document-border">
         {events.map((event, i) => (
           <motion.div
-            key={event.date + event.category}
+            key={`${event.date}-${event.category}-${i}`}
             initial={{ x: -15, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.6 + i * 0.15 }}

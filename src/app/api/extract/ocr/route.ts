@@ -37,6 +37,10 @@ interface OcrErrorResponse {
   error: string;
 }
 
+type DocumentTextAnchor = {
+  textSegments?: { startIndex?: unknown; endIndex?: unknown }[] | null;
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -47,7 +51,7 @@ interface OcrErrorResponse {
  */
 function extractTextFromAnchor(
   fullText: string,
-  textAnchor: { textSegments?: { startIndex?: string | number; endIndex?: string | number }[] } | null | undefined,
+  textAnchor: DocumentTextAnchor | null | undefined,
 ): string {
   if (!textAnchor?.textSegments?.length) return "";
 
@@ -68,7 +72,10 @@ function extractTextFromAnchor(
  * Returns a fallback zero-box when vertices are missing or incomplete.
  */
 function buildBoundingBox(
-  boundingPoly: { normalizedVertices?: { x?: number | null; y?: number | null }[] } | null | undefined,
+  boundingPoly:
+    | { normalizedVertices?: { x?: number | null; y?: number | null }[] | null }
+    | null
+    | undefined,
   pageWidth: number,
   pageHeight: number,
 ): BoundingBox {

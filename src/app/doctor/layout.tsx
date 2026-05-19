@@ -5,5 +5,5 @@ export default function DoctorLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthGuard>{children}</AuthGuard>;
+  return <AuthGuard requiredRole="doctor">{children}</AuthGuard>;
 }

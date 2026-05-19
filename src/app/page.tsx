@@ -4,47 +4,67 @@ import { motion } from 'motion/react';
 import { Dna, Fingerprint, Network, AlignCenter, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 
 export default function Home() {
-  const [isDoctor, setIsDoctor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<'patient' | 'doctor'>('patient');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const router = useRouter();
 
   // Auto-redirect if already authenticated (keep-logged-in)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // User is already signed in — redirect to their last-used dashboard
-        const savedRole = localStorage.getItem('medical-intake-role');
-        router.push(savedRole === 'doctor' ? '/doctor' : '/patient');
+    const redirectAuthenticatedUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        // User is already signed in; route from trusted Supabase metadata.
+        const role = session.user.user_metadata?.role;
+        router.replace(role === 'doctor' ? '/doctor' : '/patient');
       } else {
         setCheckingAuth(false);
       }
-    });
-    return () => unsubscribe();
+    };
+
+    redirectAuthenticatedUser();
   }, [router]);
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-
-      // Persist the role choice so returning users get auto-routed correctly
-      localStorage.setItem('medical-intake-role', isDoctor ? 'doctor' : 'patient');
-
-      // Route based on the selected toggle
-      if (isDoctor) {
-        router.push('/doctor');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { role: selectedRole } },
+      });
+      if (error) throw error;
+      if (data.session) {
+        router.push(selectedRole === 'doctor' ? '/doctor' : '/patient');
       } else {
-        router.push('/patient');
+        alert("Sign up successful! Please check your email to verify your account.");
       }
-    } catch (error: any) {
-      alert("Authentication Error: " + error.message);
+    } catch (error: unknown) {
+      alert("Sign Up Error: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      const role = data.session.user.user_metadata?.role;
+      router.push(role === 'doctor' ? '/doctor' : '/patient');
+    } catch (error: unknown) {
+      alert("Login Error: " + (error instanceof Error ? error.message : "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -139,42 +159,74 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Systems Login</h2>
               <p className="text-sm font-sans text-slate-500 mb-8">Authentication required for Core Systems</p>
 
-              {/* Role Toggle */}
-              <div className="flex bg-slate-100 p-1 rounded-xl mb-8">
-                <button
-                  type="button"
-                  onClick={() => setIsDoctor(false)}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${!isDoctor ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Patient
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsDoctor(true)}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${isDoctor ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Doctor
-                </button>
-              </div>
+              <form className="space-y-5" onSubmit={handleLogin}>
+                {/* Role Toggle */}
+                <div className="flex bg-slate-100/50 p-1 rounded-xl mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('patient')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                      selectedRole === 'patient'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Patient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('doctor')}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                      selectedRole === 'doctor'
+                        ? 'bg-white text-teal-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Doctor
+                  </button>
+                </div>
 
-              <form className="space-y-5" onSubmit={handleAuth}>
-                <div className="pt-2">
-                  <button type="submit" disabled={loading} className="relative w-full overflow-hidden rounded-xl p-[1px] group/btn disabled:opacity-70">
+                {/* Email Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <input 
+                    type="email" 
+                    required 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                {/* Password Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button type="submit" disabled={loading} className="relative flex-1 overflow-hidden rounded-xl p-[1px] group/btn disabled:opacity-70">
                     <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-teal-400 rounded-xl opacity-80 group-hover/btn:opacity-100 transition-opacity" />
                     <div className="relative flex items-center justify-center gap-2 bg-white w-full py-3.5 rounded-xl transition-all group-hover/btn:bg-transparent text-slate-800 group-hover/btn:text-white font-medium shadow-sm">
-                      <Fingerprint className="w-5 h-5 text-indigo-500 group-hover/btn:text-white transition-colors" />
-                      {loading ? 'Authenticating...' : `Authenticate as ${isDoctor ? 'Doctor' : 'Patient'}`}
+                      {loading ? 'Processing...' : 'Log In'}
                     </div>
+                  </button>
+                  <button type="button" onClick={handleSignUp} disabled={loading} className="relative flex-1 overflow-hidden rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-3.5 transition-colors disabled:opacity-70">
+                    Sign Up
                   </button>
                 </div>
               </form>
 
               <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
                  <span>STATUS: <span className="text-teal-600 uppercase font-semibold">Operational</span></span>
-                 <button className="flex items-center gap-1 hover:text-slate-800 transition-colors" onClick={handleAuth as any}>
-                   <span>GOOGLE SSO</span>
-                   <ArrowRight className="w-3 h-3" />
-                 </button>
               </div>
             </div>
           </motion.div>

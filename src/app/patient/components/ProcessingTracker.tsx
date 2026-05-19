@@ -3,26 +3,20 @@
 import { motion } from "motion/react";
 import { ScanText } from "lucide-react";
 
-const tasks = [
-  {
-    filename: "Spinal_MRI_Report_2023.pdf",
-    status: "Extracting Facts",
-    statusColor: "text-secondary",
-    progress: 65,
-    detail: "Verifying against clinical taxonomy...",
-    active: true,
-  },
-  {
-    filename: "Dr_Smith_Notes_Oct.jpeg",
-    status: "Queued",
-    statusColor: "text-on-surface-variant",
-    progress: 0,
-    detail: "Waiting for compute engine...",
-    active: false,
-  },
-];
+export interface ProcessingTask {
+  filename: string;
+  status: string;
+  statusColor: string;
+  progress: number;
+  detail: string;
+  active: boolean;
+}
 
-export default function ProcessingTracker() {
+export interface ProcessingTrackerProps {
+  tasks: ProcessingTask[];
+}
+
+export default function ProcessingTracker({ tasks }: ProcessingTrackerProps) {
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}

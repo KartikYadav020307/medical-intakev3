@@ -32,9 +32,15 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange }: SidebarProps) {
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+  const handleSignOut = () => {
+    // 1. Instantly route the user to the landing page for a snappy UX
+    router.push("/");
+    
+    // 2. Handle the database sign-out in the background
+    supabase.auth.signOut().then(() => {
+      // 3. Purge the cache only after the sign-out is confirmed
+      router.refresh(); 
+    });
   };
 
   return (
@@ -99,7 +105,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange }:
           </div>
         </a>
         <button
-          onClick={handleLogout}
+          onClick={handleSignOut}
           title={collapsed ? "Log Out" : undefined}
           className="flex items-center rounded-lg overflow-hidden transition-colors duration-200 cursor-pointer w-full text-left text-on-surface-variant hover:bg-surface-variant h-10 w-full px-2.5"
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { motion } from "motion/react";
 import { Loader2, AlertCircle, X, FileText } from "lucide-react";
@@ -8,7 +8,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
 // Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -30,6 +30,28 @@ export default function PdfViewer({
   onClearHighlight,
 }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
+  const [containerWidth, setContainerWidth] = useState<number>(800);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        // Adjust for padding (px-8 = 32px on both sides = 64px) or just take raw width
+        // and cap it slightly so it looks good embedded
+        setContainerWidth(
+          Math.min(800, entries[0].contentRect.width)
+        );
+      }
+    });
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <motion.div
@@ -63,7 +85,10 @@ export default function PdfViewer({
       </div>
 
       {/* PDF Container */}
-      <div className="flex-1 w-full h-full overflow-auto flex justify-center bg-gray-100 pt-20 pb-12 px-8">
+      <div 
+        ref={containerRef}
+        className="flex-1 w-full h-full overflow-auto flex justify-center bg-gray-100 pt-20 pb-12 px-8"
+      >
         <Document
           file={`/api/proxy-pdf?url=${encodeURIComponent(pdfUrl)}`}
           onLoadSuccess={({ numPages: n }) => setNumPages(n)}
@@ -86,7 +111,7 @@ export default function PdfViewer({
           <div className="relative inline-block shadow-2xl bg-white border border-document-border">
             <Page
               pageNumber={1}
-              width={800} // Expanded width for the massive modal
+              width={containerWidth} // Dynamic responsive width
               renderTextLayer={true}
               renderAnnotationLayer={true}
             />
