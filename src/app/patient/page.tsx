@@ -229,8 +229,10 @@ export default function PatientDashboard() {
 
   const renderMasterTimeline = () => (
     masterTimeline.length === 0 ? (
-      <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
-        <p className="text-slate-500">No events found in your history.</p>
+      <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
+        <FileText className="w-12 h-12 text-slate-300 mb-4" />
+        <h3 className="text-lg font-semibold text-slate-900">No medical records yet</h3>
+        <p className="text-slate-500 mt-1 max-w-sm">Upload your first PDF medical document to start extracting insights and building your timeline.</p>
       </div>
     ) : (
       <TimelineSection
@@ -402,8 +404,10 @@ export default function PatientDashboard() {
               </div>
               
               {patientHistory.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm">
-                  <p className="text-slate-500">No records found. Head to the Upload tab to process your first document.</p>
+                <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
+                  <FileText className="w-12 h-12 text-slate-300 mb-4" />
+                  <h3 className="text-lg font-semibold text-slate-900">No medical records yet</h3>
+                  <p className="text-slate-500 mt-1 max-w-sm">Upload your first PDF medical document to start extracting insights and building your timeline.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

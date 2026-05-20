@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Stethoscope, Pill, FlaskConical, Loader2 } from "lucide-react";
+import { Stethoscope, Pill, FlaskConical } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types (mirroring the API response shape)
@@ -78,6 +78,32 @@ export default function ExtractedDataCards({
   };
 
   // ── Render ─────────────────────────────────────────────────────────
+  if (isProcessing) {
+    return (
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse" />
+                <div className="w-24 h-5 rounded-md bg-slate-200 animate-pulse" />
+              </div>
+              <div className="space-y-3 mt-2">
+                <div className="w-full h-4 rounded bg-slate-100 animate-pulse" />
+                <div className="w-5/6 h-4 rounded bg-slate-100 animate-pulse" />
+                <div className="w-4/6 h-4 rounded bg-slate-100 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
@@ -99,14 +125,7 @@ export default function ExtractedDataCards({
             </span>
           </div>
 
-          {isProcessing && (
-            <div className="flex items-center gap-2 py-6 justify-center text-on-surface-variant">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-body-sm">Extracting...</span>
-            </div>
-          )}
-
-          {!isProcessing && data.diagnoses.length === 0 && (
+          {data.diagnoses.length === 0 && (
             <p className="text-body-sm text-on-surface-variant py-4 text-center">
               No diagnoses found.
             </p>
@@ -151,14 +170,7 @@ export default function ExtractedDataCards({
             </span>
           </div>
 
-          {isProcessing && (
-            <div className="flex items-center gap-2 py-6 justify-center text-on-surface-variant">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-body-sm">Extracting...</span>
-            </div>
-          )}
-
-          {!isProcessing && data.medications.length === 0 && (
+          {data.medications.length === 0 && (
             <p className="text-body-sm text-on-surface-variant py-4 text-center">
               No medications found.
             </p>
@@ -205,14 +217,7 @@ export default function ExtractedDataCards({
             </span>
           </div>
 
-          {isProcessing && (
-            <div className="flex items-center gap-2 py-6 justify-center text-on-surface-variant">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-body-sm">Extracting...</span>
-            </div>
-          )}
-
-          {!isProcessing && data.labResults.length === 0 && (
+          {data.labResults.length === 0 && (
             <p className="text-body-sm text-on-surface-variant py-4 text-center">
               No lab results found.
             </p>

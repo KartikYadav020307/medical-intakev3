@@ -12,6 +12,8 @@ export default function Home() {
   const [selectedRole, setSelectedRole] = useState<'patient' | 'doctor'>('patient');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const router = useRouter();
 
   // Auto-redirect if already authenticated (keep-logged-in)
@@ -36,6 +38,8 @@ export default function Home() {
   const handleSignUp = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -46,10 +50,10 @@ export default function Home() {
       if (data.session) {
         router.push(selectedRole === 'doctor' ? '/doctor' : '/patient');
       } else {
-        alert("Sign up successful! Please check your email to verify your account.");
+        setSuccessMsg("Check your email for the magic link!");
       }
     } catch (error: unknown) {
-      alert("Sign Up Error: " + (error instanceof Error ? error.message : "Unknown error"));
+      setErrorMsg(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -58,13 +62,15 @@ export default function Home() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       const role = data.session.user.user_metadata?.role;
       router.push(role === 'doctor' ? '/doctor' : '/patient');
     } catch (error: unknown) {
-      alert("Login Error: " + (error instanceof Error ? error.message : "Unknown error"));
+      setErrorMsg(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -211,6 +217,9 @@ export default function Home() {
                     placeholder="••••••••"
                   />
                 </div>
+
+                {errorMsg && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md mb-4 text-center border border-red-100">{errorMsg}</div>}
+                {successMsg && <div className="text-emerald-600 text-sm bg-emerald-50 p-3 rounded-md mb-4 text-center border border-emerald-100">{successMsg}</div>}
 
                 <div className="pt-2 flex gap-3">
                   <button type="submit" disabled={loading} className="relative flex-1 overflow-hidden rounded-xl p-[1px] group/btn disabled:opacity-70">

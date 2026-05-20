@@ -24,7 +24,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
     setUploadError(null);
 
     try {
-      const fileName = `${Date.now()}_${file.name}`;
+      const fileName = `${crypto.randomUUID()}_${file.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from("records")
@@ -88,7 +88,9 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
       />
 
       {/* Compact horizontal drop zone */}
-      <div
+      <button
+        type="button"
+        aria-label="Upload medical record"
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragOver(true);
@@ -101,7 +103,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
           if (file) handleFileUpload(file);
         }}
         onClick={() => !isUploading && fileInputRef.current?.click()}
-        className={`relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${
+        className={`w-full text-left relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${
           uploadError
             ? "border-red-300 bg-red-50/50"
             : isDragOver
@@ -173,7 +175,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
             </span>
           </div>
         )}
-      </div>
+      </button>
     </motion.div>
   );
 }

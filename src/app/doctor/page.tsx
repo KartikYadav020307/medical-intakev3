@@ -7,6 +7,7 @@ import {
   AlertCircle,
   CalendarClock,
   FileText,
+  FolderOpen,
   LogOut,
   RefreshCw,
   Search,
@@ -309,15 +310,10 @@ export default function DoctorDashboard() {
             </p>
           </div>
         ) : patientRows.length === 0 && !error ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <FileText className="mx-auto h-10 w-10 text-slate-400" />
-            <h3 className="mt-4 text-lg font-semibold text-slate-950">
-              No patient records yet
-            </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              New patient uploads will appear here after records are processed
-              into the clinic database.
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
+            <FolderOpen className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900">No patients assigned</h3>
+            <p className="text-slate-500 mt-1 max-w-sm">When patients create accounts and upload documents, they will appear in your clinical queue here.</p>
           </div>
         ) : patientRows.length > 0 ? (
           <>
