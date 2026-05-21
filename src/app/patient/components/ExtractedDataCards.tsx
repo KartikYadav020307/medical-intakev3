@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Stethoscope, Pill, FlaskConical } from "lucide-react";
+import { Stethoscope, Pill, FlaskConical, AlertTriangle, Activity } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types (mirroring the API response shape)
@@ -27,10 +27,26 @@ interface LabResultItem {
   boundingBox: [number, number, number, number];
 }
 
+interface AllergyItem {
+  allergen: string;
+  reaction?: string;
+  severity?: string;
+  source_page?: number;
+}
+
+interface ProcedureItem {
+  name: string;
+  date?: string;
+  body_part?: string;
+  source_page?: number;
+}
+
 export interface ExtractionData {
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
+  allergies?: AllergyItem[];
+  procedures?: ProcedureItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +102,7 @@ export default function ExtractedDataCards({
         transition={{ duration: 0.5, delay: 0.5 }}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse" />
@@ -250,6 +266,106 @@ export default function ExtractedDataCards({
                     </span>
                   )}
                 </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── Allergies ── */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-red-200/60 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 shadow-inner">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 tracking-tight">
+              Allergies
+            </h3>
+            <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+              {data.allergies?.length || 0}
+            </span>
+          </div>
+
+          {(!data.allergies || data.allergies.length === 0) && (
+            <p className="text-body-sm text-on-surface-variant py-4 text-center">
+              No allergies extracted.
+            </p>
+          )}
+
+          {data.allergies?.map((a, i) => (
+            <motion.div
+              key={`allergy-${i}`}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => onHighlight([0, 0, 0, 0])}
+              className={`p-4 rounded-2xl border border-slate-200 cursor-pointer transition-all duration-300 mb-3 last:mb-0 hover:border-red-300 hover:bg-red-50/30 hover:-translate-y-0.5 hover:shadow-sm`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-sm font-bold text-red-600 leading-snug">
+                    {a.allergen}
+                  </span>
+                  {(a.reaction || a.severity) && (
+                    <span className="text-xs font-medium text-slate-500 mt-1.5 block">
+                      {[a.reaction, a.severity].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </div>
+                {a.source_page && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                    Pg {a.source_page}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── Procedures ── */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-indigo-200/60 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+              <Activity className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-800 tracking-tight">
+              Procedures
+            </h3>
+            <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+              {data.procedures?.length || 0}
+            </span>
+          </div>
+
+          {(!data.procedures || data.procedures.length === 0) && (
+            <p className="text-body-sm text-on-surface-variant py-4 text-center">
+              No procedures extracted.
+            </p>
+          )}
+
+          {data.procedures?.map((p, i) => (
+            <motion.div
+              key={`procedure-${i}`}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => onHighlight([0, 0, 0, 0])}
+              className={`p-4 rounded-2xl border border-slate-200 cursor-pointer transition-all duration-300 mb-3 last:mb-0 hover:border-indigo-300 hover:bg-indigo-50/30 hover:-translate-y-0.5 hover:shadow-sm`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-sm font-semibold text-slate-800 leading-snug">
+                    {p.name}
+                  </span>
+                  {(p.date || p.body_part) && (
+                    <span className="text-xs font-medium text-slate-500 mt-1.5 block">
+                      {[p.date, p.body_part].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </div>
+                {p.source_page && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                    Pg {p.source_page}
+                  </span>
+                )}
               </div>
             </motion.div>
           ))}

@@ -77,6 +77,71 @@ const getShortPatientId = (userId: string) => {
   return `${userId.slice(0, 8)}...${userId.slice(-6)}`;
 };
 
+function PatientRowCard({ patient }: { patient: PatientRow }) {
+  return (
+    <article className="group flex flex-col md:grid md:grid-cols-[2fr_100px_2.5fr_150px_130px_120px] md:items-center gap-4 bg-white p-4 md:px-5 md:py-4 transition hover:bg-slate-50 text-left md:border-b md:border-slate-100 last:border-0 rounded-lg md:rounded-none">
+      {/* Mobile Header / Desktop Column 1 */}
+      <div className="flex items-start md:items-center justify-between gap-3 min-w-0">
+        <div className="flex items-center gap-3 w-full">
+          <div className="hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
+            {patient.displayId.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm md:text-base font-semibold text-slate-950 truncate">
+              Patient {patient.displayId}
+            </p>
+            <p className="mt-1 font-mono text-xs text-slate-500 truncate max-w-64">
+              {patient.userId}
+            </p>
+          </div>
+        </div>
+        {/* Mobile only Status */}
+        <span className="md:hidden shrink-0 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          Ready
+        </span>
+      </div>
+
+      {/* Stats row (Mobile) / Table cells (Desktop) */}
+      <div className="grid grid-cols-2 gap-3 md:contents text-sm">
+        <div className="rounded-lg bg-slate-50 p-3 md:p-0 md:bg-transparent">
+          <p className="md:hidden text-xs font-medium text-slate-500 mb-1">Documents</p>
+          <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800">
+            {patient.documentCount}
+          </span>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-3 md:hidden">
+          <p className="text-xs font-medium text-slate-500">Latest</p>
+          <p className="mt-1 font-semibold text-slate-950">{formatDate(patient.latestUpload)}</p>
+        </div>
+      </div>
+
+      {/* Signals */}
+      <div className="flex flex-wrap gap-2 text-xs font-semibold">
+        <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-blue-700">Dx {patient.diagnosesCount}</span>
+        <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-amber-700">Rx {patient.medicationsCount}</span>
+        <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700">Labs {patient.labsCount}</span>
+      </div>
+
+      {/* Desktop Latest Date */}
+      <div className="hidden md:block text-sm font-medium text-slate-700">
+        {formatDate(patient.latestUpload, true)}
+      </div>
+
+      {/* Desktop Status Badge */}
+      <div className="hidden md:block">
+        <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Ready for review</span>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-2 md:mt-0 w-full md:text-right">
+        <button type="button" disabled className="flex md:inline-flex h-10 md:h-9 w-full md:w-auto cursor-not-allowed items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold text-slate-400">
+          View Patient
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export default function DoctorDashboard() {
   const router = useRouter();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
@@ -316,145 +381,23 @@ export default function DoctorDashboard() {
             <p className="text-slate-500 mt-1 max-w-sm">When patients create accounts and upload documents, they will appear in your clinical queue here.</p>
           </div>
         ) : patientRows.length > 0 ? (
-          <>
-            <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
-              <table className="w-full border-collapse text-left">
-                <thead className="bg-slate-100 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  <tr>
-                    <th className="px-5 py-4">Patient</th>
-                    <th className="px-5 py-4">Documents</th>
-                    <th className="px-5 py-4">Clinical Signals</th>
-                    <th className="px-5 py-4">Most Recent Upload</th>
-                    <th className="px-5 py-4">Status</th>
-                    <th className="px-5 py-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {patientRows.map((patient) => (
-                    <tr
-                      key={patient.userId}
-                      className="transition hover:bg-slate-50"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-sm font-bold text-blue-700">
-                            {patient.displayId.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-950">
-                              Patient {patient.displayId}
-                            </p>
-                            <p className="mt-1 max-w-64 truncate font-mono text-xs text-slate-500">
-                              {patient.userId}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800">
-                          {patient.documentCount}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                          <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-blue-700">
-                            Dx {patient.diagnosesCount}
-                          </span>
-                          <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-amber-700">
-                            Rx {patient.medicationsCount}
-                          </span>
-                          <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700">
-                            Labs {patient.labsCount}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-sm font-medium text-slate-700">
-                        {formatDate(patient.latestUpload, true)}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                          Ready for review
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          type="button"
-                          disabled
-                          aria-disabled="true"
-                          className="inline-flex h-9 cursor-not-allowed items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold text-slate-400"
-                        >
-                          View Patient
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="flex flex-col gap-4 md:gap-0 md:bg-white md:border md:border-slate-200 md:rounded-lg overflow-hidden md:shadow-sm">
+            {/* Desktop Table Header */}
+            <div className="hidden md:grid md:grid-cols-[2fr_100px_2.5fr_150px_130px_120px] bg-slate-100 px-5 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 border-b border-slate-200">
+              <div>Patient</div>
+              <div>Documents</div>
+              <div>Clinical Signals</div>
+              <div>Most Recent Upload</div>
+              <div>Status</div>
+              <div className="text-right">Action</div>
             </div>
 
-            <div className="grid gap-4 md:hidden">
+            <div className="flex flex-col gap-4 md:gap-0">
               {patientRows.map((patient) => (
-                <article
-                  key={patient.userId}
-                  className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-950">
-                        Patient {patient.displayId}
-                      </p>
-                      <p className="mt-1 truncate font-mono text-xs text-slate-500">
-                        {patient.userId}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      Ready
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Documents
-                      </p>
-                      <p className="mt-1 font-semibold text-slate-950">
-                        {patient.documentCount}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Latest
-                      </p>
-                      <p className="mt-1 font-semibold text-slate-950">
-                        {formatDate(patient.latestUpload)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-                    <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-blue-700">
-                      Dx {patient.diagnosesCount}
-                    </span>
-                    <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-amber-700">
-                      Rx {patient.medicationsCount}
-                    </span>
-                    <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700">
-                      Labs {patient.labsCount}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled
-                    aria-disabled="true"
-                    className="mt-4 flex h-10 w-full cursor-not-allowed items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-400"
-                  >
-                    View Patient
-                  </button>
-                </article>
+                <PatientRowCard key={patient.userId} patient={patient} />
               ))}
             </div>
-          </>
+          </div>
         ) : null}
       </main>
     </div>

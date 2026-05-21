@@ -27,10 +27,26 @@ interface LabResultItem {
   boundingBox: [number, number, number, number];
 }
 
+interface AllergyItem {
+  allergen: string;
+  reaction: string;
+  severity: string;
+  source_page: number;
+}
+
+interface ProcedureItem {
+  name: string;
+  date: string;
+  body_part: string;
+  source_page: number;
+}
+
 interface GeminiExtractionResult {
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
+  allergies: AllergyItem[];
+  procedures: ProcedureItem[];
 }
 
 interface SuccessResponse {
@@ -135,8 +151,60 @@ const EXTRACTION_SCHEMA = {
         required: ["testName", "value", "unit", "boundingBox"],
       },
     },
+    allergies: {
+      type: "array",
+      description: "List of patient allergies found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          allergen: {
+            type: "string",
+            description: "The food or drug allergen.",
+          },
+          reaction: {
+            type: "string",
+            description: "The reaction experienced by the patient.",
+          },
+          severity: {
+            type: "string",
+            description: "The severity of the reaction.",
+          },
+          source_page: {
+            type: "number",
+            description: "The page number where the allergy was found.",
+          },
+        },
+        required: ["allergen", "reaction", "severity", "source_page"],
+      },
+    },
+    procedures: {
+      type: "array",
+      description: "List of medical procedures, surgeries, or imaging found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The name of the procedure, surgery, or imaging.",
+          },
+          date: {
+            type: "string",
+            description: "The date of the procedure.",
+          },
+          body_part: {
+            type: "string",
+            description: "The body part the procedure applied to.",
+          },
+          source_page: {
+            type: "number",
+            description: "The page number where the procedure was found.",
+          },
+        },
+        required: ["name", "date", "body_part", "source_page"],
+      },
+    },
   },
-  required: ["diagnoses", "medications", "labResults"],
+  required: ["diagnoses", "medications", "labResults", "allergies", "procedures"],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -146,16 +214,18 @@ const EXTRACTION_SCHEMA = {
 const SYSTEM_INSTRUCTION = `You are a medical document analysis AI specializing in extracting structured clinical data from PDF documents.
 
 TASK:
-Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, and lab results.
+Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, lab results, allergies, and procedures.
 
 BOUNDING BOX RULES:
-- For every extracted item, provide the 2D spatial bounding box where that text appears in the document.
+- For every extracted item that asks for a bounding box, provide the 2D spatial bounding box where that text appears in the document.
 - Bounding boxes use the format [ymin, xmin, ymax, xmax].
 - All coordinates are integers normalized to a 1000×1000 scale, where (0, 0) is the top-left corner and (1000, 1000) is the bottom-right corner.
 - The bounding box should tightly enclose the relevant text region.
 
 EXTRACTION RULES:
 - Extract ONLY information that is explicitly present in the document. Do NOT hallucinate or infer data that is not written.
+- Identify any patient allergies, specifically food or drug allergies, the reaction, and severity.
+- Identify past medical procedures, surgeries, or imaging (e.g., appendectomy, MRI).
 - If a category has no data in the document, return an empty array for that category.
 - For confidence: use "High" for clearly and unambiguously stated items, "Medium" for probable items, "Low" for ambiguous or partially legible items.
 - For dosage and frequency: use an empty string "" if the information is not specified in the document.
@@ -282,7 +352,7 @@ export async function POST(
               },
             },
             {
-              text: "Extract all diagnoses, medications, and lab results from this medical document. Include the spatial bounding box for each extracted item.",
+              text: "Extract all diagnoses, medications, lab results, allergies, and procedures from this medical document. Include the spatial bounding box for each extracted item when requested by the schema.",
             },
           ],
         },
@@ -321,6 +391,8 @@ export async function POST(
       diagnoses: Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
       medications: Array.isArray(parsed.medications) ? parsed.medications : [],
       labResults: Array.isArray(parsed.labResults) ? parsed.labResults : [],
+      allergies: Array.isArray(parsed.allergies) ? parsed.allergies : [],
+      procedures: Array.isArray(parsed.procedures) ? parsed.procedures : [],
     };
 
     // Clamp bounding box values to valid 0–1000 range
