@@ -17,6 +17,7 @@ interface MedicationItem {
   name: string;
   dosage: string;
   frequency: string;
+  confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
 }
 
@@ -24,6 +25,8 @@ interface LabResultItem {
   testName: string;
   value: string;
   unit: string;
+  isAbnormal: boolean;
+  confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
 }
 
@@ -31,14 +34,56 @@ interface AllergyItem {
   allergen: string;
   reaction: string;
   severity: string;
-  source_page: number;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
 }
 
 interface ProcedureItem {
   name: string;
   date: string;
   body_part: string;
-  source_page: number;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
+}
+
+interface VitalItem {
+  measurement: string;
+  value: string;
+  unit: string;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
+}
+
+interface PhysicianItem {
+  name: string;
+  role: string;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
+}
+
+interface IcdCodeItem {
+  code: string;
+  description: string;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
+}
+
+interface FamilyHistoryItem {
+  condition: string;
+  relative: string;
+}
+
+interface SocialHistoryItem {
+  category: "Smoking" | "Alcohol";
+  status: string;
+  details: string;
+}
+
+interface ImagingFindingItem {
+  bodyPart: string;
+  finding: string;
+  confidence: "High" | "Medium" | "Low";
+  boundingBox: [number, number, number, number];
 }
 
 interface GeminiExtractionResult {
@@ -47,11 +92,24 @@ interface GeminiExtractionResult {
   labResults: LabResultItem[];
   allergies: AllergyItem[];
   procedures: ProcedureItem[];
+  vitals: VitalItem[];
+  physicians: PhysicianItem[];
+  icdCodes: IcdCodeItem[];
+  familyHistory: FamilyHistoryItem[];
+  socialHistory: SocialHistoryItem[];
+  imagingFindings: ImagingFindingItem[];
+}
+
+interface SafetyAlerts {
+  conflictFound: boolean;
+  severity: "None" | "Moderate" | "CRITICAL RED ALERT";
+  description: string;
 }
 
 interface SuccessResponse {
   success: true;
   data: GeminiExtractionResult;
+  safetyAlerts?: SafetyAlerts;
 }
 
 interface ErrorResponse {
@@ -112,6 +170,12 @@ const EXTRACTION_SCHEMA = {
             description:
               "How often the medication is taken (e.g. 'twice daily'). Empty string if not specified.",
           },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this medication extraction.",
+          },
           boundingBox: {
             type: "array",
             description:
@@ -119,7 +183,7 @@ const EXTRACTION_SCHEMA = {
             items: { type: "integer" },
           },
         },
-        required: ["name", "dosage", "frequency", "boundingBox"],
+        required: ["name", "dosage", "frequency", "confidence", "boundingBox"],
       },
     },
     labResults: {
@@ -141,6 +205,17 @@ const EXTRACTION_SCHEMA = {
             description:
               "The unit of measurement for the result. Empty string if not specified.",
           },
+          isAbnormal: {
+            type: "boolean",
+            description:
+              "True if the lab value falls outside the normal/reference range, false otherwise. Evaluate the value against standard clinical reference ranges.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this lab result extraction.",
+          },
           boundingBox: {
             type: "array",
             description:
@@ -148,7 +223,7 @@ const EXTRACTION_SCHEMA = {
             items: { type: "integer" },
           },
         },
-        required: ["testName", "value", "unit", "boundingBox"],
+        required: ["testName", "value", "unit", "isAbnormal", "confidence", "boundingBox"],
       },
     },
     allergies: {
@@ -169,12 +244,20 @@ const EXTRACTION_SCHEMA = {
             type: "string",
             description: "The severity of the reaction.",
           },
-          source_page: {
-            type: "number",
-            description: "The page number where the allergy was found.",
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this allergy extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
           },
         },
-        required: ["allergen", "reaction", "severity", "source_page"],
+        required: ["allergen", "reaction", "severity", "confidence", "boundingBox"],
       },
     },
     procedures: {
@@ -195,26 +278,246 @@ const EXTRACTION_SCHEMA = {
             type: "string",
             description: "The body part the procedure applied to.",
           },
-          source_page: {
-            type: "number",
-            description: "The page number where the procedure was found.",
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this procedure extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
           },
         },
-        required: ["name", "date", "body_part", "source_page"],
+        required: ["name", "date", "body_part", "confidence", "boundingBox"],
+      },
+    },
+    vitals: {
+      type: "array",
+      description: "List of vital sign measurements found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          measurement: {
+            type: "string",
+            description:
+              "The name of the vital sign (e.g., Blood Pressure, Heart Rate, Temperature).",
+          },
+          value: {
+            type: "string",
+            description: "The recorded value of the vital sign.",
+          },
+          unit: {
+            type: "string",
+            description:
+              "The unit of measurement (e.g., mmHg, bpm, °F). Empty string if not specified.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this vital sign extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
+          },
+        },
+        required: ["measurement", "value", "unit", "confidence", "boundingBox"],
+      },
+    },
+    physicians: {
+      type: "array",
+      description: "List of attending or referring physicians found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The physician's full name.",
+          },
+          role: {
+            type: "string",
+            description:
+              "The physician's role or specialty (e.g., Attending, Cardiologist). Empty string if not specified.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this physician extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
+          },
+        },
+        required: ["name", "role", "confidence", "boundingBox"],
+      },
+    },
+    icdCodes: {
+      type: "array",
+      description: "List of ICD-10 (or ICD-9) codes found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          code: {
+            type: "string",
+            description: "The ICD code (e.g., E11.9, J06.9).",
+          },
+          description: {
+            type: "string",
+            description:
+              "The description or label associated with the ICD code.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description:
+              "Confidence level for this ICD code extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
+          },
+        },
+        required: ["code", "description", "confidence", "boundingBox"],
+      },
+    },
+    familyHistory: {
+      type: "array",
+      description: "List of family medical history conditions found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          condition: {
+            type: "string",
+            description: "The medical condition that runs in the family.",
+          },
+          relative: {
+            type: "string",
+            description: "The relative who is affected by the condition (e.g., 'Father', 'Maternal Grandmother').",
+          },
+        },
+        required: ["condition", "relative"],
+      },
+    },
+    socialHistory: {
+      type: "array",
+      description: "List of social history details for smoking and alcohol use.",
+      items: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: ["Smoking", "Alcohol"],
+            description: "The category of the social history item.",
+          },
+          status: {
+            type: "string",
+            description: "The current status (e.g., 'Current smoker', 'Former', 'Never', 'Occasional').",
+          },
+          details: {
+            type: "string",
+            description: "Any additional details provided (e.g., '1 pack/day for 20 years', '2 drinks/week'). Empty string if not specified.",
+          },
+        },
+        required: ["category", "status", "details"],
+      },
+    },
+    imagingFindings: {
+      type: "array",
+      description: "List of imaging and radiology findings found in the document.",
+      items: {
+        type: "object",
+        properties: {
+          bodyPart: {
+            type: "string",
+            description: "The body part examined.",
+          },
+          finding: {
+            type: "string",
+            description: "The finding or impression from the imaging report.",
+          },
+          confidence: {
+            type: "string",
+            enum: ["High", "Medium", "Low"],
+            description: "Confidence level for this imaging finding extraction.",
+          },
+          boundingBox: {
+            type: "array",
+            description:
+              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
+            items: { type: "integer" },
+          },
+        },
+        required: ["bodyPart", "finding", "confidence", "boundingBox"],
       },
     },
   },
-  required: ["diagnoses", "medications", "labResults", "allergies", "procedures"],
+  required: ["diagnoses", "medications", "labResults", "allergies", "procedures", "vitals", "physicians", "icdCodes", "familyHistory", "socialHistory", "imagingFindings"],
 } as const;
+
+const PRECHECK_SCHEMA = {
+  type: "object",
+  properties: {
+    isMedical: {
+      type: "boolean",
+      description:
+        "true if the document is a medical record, lab report, prescription, or clinical note; false otherwise.",
+    },
+    reason: {
+      type: "string",
+      description: "A one-sentence explanation for the classification.",
+    },
+    isWrongPatient: {
+      type: "boolean",
+      description: "true if the document explicitly belongs to a different patient than expected.",
+    },
+    detectedPatientName: {
+      type: "string",
+      description: "The name of the patient the document belongs to, if isWrongPatient is true.",
+    },
+  },
+  required: ["isMedical", "reason"],
+} as const;
+
+const CONFLICT_SCHEMA = {
+  type: "object",
+  properties: {
+    conflictFound: {
+      type: "boolean",
+      description: "True if a drug-allergy conflict exists, false otherwise.",
+    },
+    severity: {
+      type: "string",
+      enum: ["None", "Moderate", "CRITICAL RED ALERT"],
+      description: "The severity of the identified conflict.",
+    },
+    description: {
+      type: "string",
+      description: "Explanation of the conflict (e.g., 'Patient is allergic to Sulfa; prescribed Bactrim').",
+    },
+  },
+  required: ["conflictFound", "severity", "description"],
+} as const;
+
+
 
 // ---------------------------------------------------------------------------
 // System instruction
-// ---------------------------------------------------------------------------
-
 const SYSTEM_INSTRUCTION = `You are a medical document analysis AI specializing in extracting structured clinical data from PDF documents.
 
 TASK:
-Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, lab results, allergies, and procedures.
+Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, lab results, allergies, procedures, vitals (e.g., blood pressure, heart rate, temperature), attending physicians (name and role/specialty), ICD-10 codes (code and description), family medical history, social history (smoking/alcohol), and imaging/radiology findings.
 
 BOUNDING BOX RULES:
 - For every extracted item that asks for a bounding box, provide the 2D spatial bounding box where that text appears in the document.
@@ -226,6 +529,13 @@ EXTRACTION RULES:
 - Extract ONLY information that is explicitly present in the document. Do NOT hallucinate or infer data that is not written.
 - Identify any patient allergies, specifically food or drug allergies, the reaction, and severity.
 - Identify past medical procedures, surgeries, or imaging (e.g., appendectomy, MRI).
+- Extract vital signs such as Blood Pressure, Heart Rate, Temperature, Respiratory Rate, SpO2, Weight, and Height. Include the measurement name, value, and unit.
+- Identify attending or referring physicians with their name and role or specialty.
+- Extract any ICD-10 (or ICD-9) codes along with their descriptions.
+- Extract family medical history: conditions that run in the patient's family and which relative is affected (e.g., "Father - diabetes", "Mother - breast cancer").
+- Extract social history for smoking and alcohol use. Record the category, current status (e.g., "Current smoker", "Former", "Never"), and any additional details (e.g., "1 pack/day for 20 years").
+- Extract imaging and radiology findings including the body part examined, the finding/impression, and confidence level.
+- For lab results, explicitly evaluate the reported value against standard clinical reference ranges and set isAbnormal to true if the value falls outside normal limits, false otherwise. If no reference range is available, use standard medical reference ranges.
 - If a category has no data in the document, return an empty array for that category.
 - For confidence: use "High" for clearly and unambiguously stated items, "Medium" for probable items, "Low" for ambiguous or partially legible items.
 - For dosage and frequency: use an empty string "" if the information is not specified in the document.
@@ -243,9 +553,11 @@ export async function POST(
 ): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   // ── 1. Parse & validate request body ────────────────────────────────
   let pdfUrl: string;
+  let expectedPatientName: string | undefined;
+  let expectedDob: string | undefined;
 
   try {
-    const body = (await request.json()) as { pdfUrl?: unknown };
+    const body = (await request.json()) as { pdfUrl?: unknown; expectedPatientName?: unknown; expectedDob?: unknown };
     if (!body.pdfUrl || typeof body.pdfUrl !== "string") {
       return NextResponse.json(
         { success: false, error: "Missing or invalid 'pdfUrl' in request body." },
@@ -253,6 +565,8 @@ export async function POST(
       );
     }
     pdfUrl = body.pdfUrl;
+    expectedPatientName = typeof body.expectedPatientName === "string" ? body.expectedPatientName : undefined;
+    expectedDob = typeof body.expectedDob === "string" ? body.expectedDob : undefined;
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid JSON in request body." },
@@ -300,6 +614,9 @@ export async function POST(
     );
   }
 
+  // ── Shared Gemini client ───────────────────────────────────────────
+  const ai = new GoogleGenAI({ apiKey });
+
   // ── 3. Fetch the PDF from the provided URL ─────────────────────────
   let pdfBase64: string;
 
@@ -335,9 +652,70 @@ export async function POST(
     );
   }
 
+  // ── 3.5  Fast-fail pre-check: classify document ────────────────────
+  try {
+    const triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
+
+    const triageResponse = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType: "application/pdf",
+                data: pdfBase64,
+              },
+            },
+            { text: "Classify this document." },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction: triageSystemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: PRECHECK_SCHEMA,
+      },
+    });
+
+    const triageText = triageResponse.text;
+
+    if (triageText) {
+      const triage = JSON.parse(triageText) as {
+        isMedical: boolean;
+        reason: string;
+        isWrongPatient?: boolean;
+        detectedPatientName?: string;
+      };
+
+      if (!triage.isMedical) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Document Rejected: ${triage.reason}`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (triage.isWrongPatient) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Security Alert: This document appears to belong to ${triage.detectedPatientName}, not ${expectedPatientName || "the current user"}. Upload rejected.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+  } catch (err) {
+    // Pre-check failed — log and proceed to main extraction rather than blocking
+    console.warn("Pre-check triage failed; proceeding to extraction.", err);
+  }
+
   // ── 4. Call Gemini API ─────────────────────────────────────────────
   try {
-    const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -352,7 +730,7 @@ export async function POST(
               },
             },
             {
-              text: "Extract all diagnoses, medications, lab results, allergies, and procedures from this medical document. Include the spatial bounding box for each extracted item when requested by the schema.",
+              text: "Extract all diagnoses, medications, lab results, allergies, procedures, vitals, attending physicians, and ICD-10 codes from this medical document. Include the spatial bounding box and confidence for each extracted item.",
             },
           ],
         },
@@ -393,6 +771,12 @@ export async function POST(
       labResults: Array.isArray(parsed.labResults) ? parsed.labResults : [],
       allergies: Array.isArray(parsed.allergies) ? parsed.allergies : [],
       procedures: Array.isArray(parsed.procedures) ? parsed.procedures : [],
+      vitals: Array.isArray(parsed.vitals) ? parsed.vitals : [],
+      physicians: Array.isArray(parsed.physicians) ? parsed.physicians : [],
+      icdCodes: Array.isArray(parsed.icdCodes) ? parsed.icdCodes : [],
+      familyHistory: Array.isArray(parsed.familyHistory) ? parsed.familyHistory : [],
+      socialHistory: Array.isArray(parsed.socialHistory) ? parsed.socialHistory : [],
+      imagingFindings: Array.isArray(parsed.imagingFindings) ? parsed.imagingFindings : [],
     };
 
     // Clamp bounding box values to valid 0–1000 range
@@ -415,9 +799,64 @@ export async function POST(
     for (const l of data.labResults) {
       l.boundingBox = clampBox(l.boundingBox);
     }
+    for (const a of data.allergies) {
+      a.boundingBox = clampBox(a.boundingBox);
+    }
+    for (const p of data.procedures) {
+      p.boundingBox = clampBox(p.boundingBox);
+    }
+    for (const v of data.vitals) {
+      v.boundingBox = clampBox(v.boundingBox);
+    }
+    for (const ph of data.physicians) {
+      ph.boundingBox = clampBox(ph.boundingBox);
+    }
+    for (const ic of data.icdCodes) {
+      ic.boundingBox = clampBox(ic.boundingBox);
+    }
+    for (const img of data.imagingFindings) {
+      img.boundingBox = clampBox(img.boundingBox);
+    }
+
+    let safetyAlerts: SafetyAlerts | undefined = undefined;
+
+    if (data.allergies.length > 0 && data.medications.length > 0) {
+      try {
+        const conflictResponse = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `Here is a patient's extracted allergy list: ${JSON.stringify(
+                    data.allergies
+                  )}. Here is their prescribed medication list: ${JSON.stringify(
+                    data.medications
+                  )}. Are there any dangerous drug-allergy interactions here?`,
+                },
+              ],
+            },
+          ],
+          config: {
+            systemInstruction:
+              "You are a clinical safety AI. Analyze the provided allergies and medications and detect if there are any dangerous drug-allergy interactions.",
+            responseMimeType: "application/json",
+            responseSchema: CONFLICT_SCHEMA,
+          },
+        });
+
+        const conflictText = conflictResponse.text;
+        if (conflictText) {
+          safetyAlerts = JSON.parse(conflictText) as SafetyAlerts;
+        }
+      } catch (err) {
+        console.warn("Safety check failed; proceeding without alerts.", err);
+      }
+    }
 
     // ── 6. Return structured response ────────────────────────────────
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    return NextResponse.json({ success: true, data, safetyAlerts }, { status: 200 });
   } catch (err) {
     console.error("Gemini API error:", err);
 

@@ -12,7 +12,6 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  Stethoscope,
   Users,
 } from "lucide-react";
 
@@ -172,6 +171,7 @@ export default function DoctorDashboard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRecentRecords();
   }, [fetchRecentRecords]);
 

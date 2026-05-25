@@ -5,8 +5,15 @@ import { CloudUpload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 
+async function generateFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 interface UploadHeroProps {
-  onUploadComplete?: (downloadUrl: string) => void;
+  onUploadComplete?: (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string) => void;
 }
 
 export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
@@ -24,6 +31,28 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
     setUploadError(null);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName = user?.user_metadata?.name || "Unknown Patient";
+      const userDob = user?.user_metadata?.dob || "Unknown Patient";
+
+      // Phase 2: Hash file and check for duplicates before expensive upload
+      const fileHash = await generateFileHash(file);
+
+      if (user) {
+        const { data: existing } = await supabase
+          .from("medical_records")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("file_hash", fileHash)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          throw new Error(
+            "Duplicate Detected: You have already uploaded this exact document."
+          );
+        }
+      }
+
       const fileName = `${crypto.randomUUID()}_${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -39,7 +68,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         .getPublicUrl(fileName);
 
       setUploadedFileName(file.name);
-      onUploadComplete?.(urlData.publicUrl);
+      onUploadComplete?.(urlData.publicUrl, userName, userDob, fileHash);
     } catch (err) {
       console.error("Upload failed:", err);
       const msg =

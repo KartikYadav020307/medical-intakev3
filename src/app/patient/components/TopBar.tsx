@@ -3,11 +3,9 @@
 import { motion } from "motion/react";
 import { Search, Bell, Settings, FileDown, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 
 export default function TopBar() {
-  const router = useRouter();
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
 

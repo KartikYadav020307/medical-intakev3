@@ -137,6 +137,7 @@ export default function PatientDashboard() {
 
   // ── Extraction state ───────────────────────────────────────────────
   const [loadedPdfUrl, setLoadedPdfUrl] = useState<string | null>(null);
+  const [expectedIdentity, setExpectedIdentity] = useState<{ name: string; dob: string } | null>(null);
   const [extractionData, setExtractionData] = useState<ExtractionData | null>(
     null,
   );
@@ -163,17 +164,29 @@ export default function PatientDashboard() {
 
 
   // ── Core extraction function ───────────────────────────────────────
-  const processDocument = useCallback(async (pdfUrl: string) => {
+  const processDocument = useCallback(async (pdfUrl: string, expectedPatientName?: string, expectedDob?: string, fileHash?: string) => {
     setIsProcessing(true);
     setExtractionData(null);
     setActiveHighlight(null);
     setExtractionError(null);
 
+    // If expected identity is explicitly passed, use it and update state, otherwise use state for retries
+    const finalPatientName = expectedPatientName ?? expectedIdentity?.name;
+    const finalDob = expectedDob ?? expectedIdentity?.dob;
+
+    if (expectedPatientName && expectedDob) {
+      setExpectedIdentity({ name: expectedPatientName, dob: expectedDob });
+    }
+
     try {
       const response = await fetch("/api/extract/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdfUrl }),
+        body: JSON.stringify({ 
+          pdfUrl, 
+          expectedPatientName: finalPatientName, 
+          expectedDob: finalDob 
+        }),
       });
 
       if (!response.ok) {
@@ -198,7 +211,8 @@ export default function PatientDashboard() {
         const { error: insertError } = await supabase.from('medical_records').insert([{
           user_id: user.id,
           pdf_url: pdfUrl,
-          extracted_data: result.data
+          extracted_data: result.data,
+          ...(fileHash && { file_hash: fileHash }),
         }]);
 
         if (insertError) throw insertError;
@@ -216,13 +230,13 @@ export default function PatientDashboard() {
     } finally {
       setIsProcessing(false);
     }
-  }, []);
+  }, [expectedIdentity]);
 
   // ── Upload complete handler — triggers extraction automatically ────
   const handleUploadComplete = useCallback(
-    (downloadUrl: string) => {
+    (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string) => {
       setLoadedPdfUrl(downloadUrl);
-      processDocument(downloadUrl);
+      processDocument(downloadUrl, expectedPatientName, expectedDob, fileHash);
     },
     [processDocument],
   );

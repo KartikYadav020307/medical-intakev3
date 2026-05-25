@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'motion/react';
-import { Dna, Fingerprint, Network, AlignCenter, ArrowRight } from 'lucide-react';
+import { Dna, Network, AlignCenter } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
