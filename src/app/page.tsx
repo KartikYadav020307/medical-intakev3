@@ -24,9 +24,13 @@ export default function Home() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        // User is already signed in; route from trusted Supabase metadata.
-        const role = session.user.user_metadata?.role;
-        router.replace(role === 'doctor' ? '/doctor' : '/patient');
+        // User is already signed in; gate on onboarding completion.
+        const meta = session.user.user_metadata;
+        if (!meta?.onboarding_complete) {
+          router.replace('/onboarding');
+        } else {
+          router.replace(meta.role === 'doctor' ? '/doctor' : '/patient');
+        }
       } else {
         setCheckingAuth(false);
       }
@@ -48,7 +52,7 @@ export default function Home() {
       });
       if (error) throw error;
       if (data.session) {
-        router.push(selectedRole === 'doctor' ? '/doctor' : '/patient');
+        router.push('/onboarding');
       } else {
         setSuccessMsg("Check your email for the magic link!");
       }
@@ -67,8 +71,12 @@ export default function Home() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      const role = data.session.user.user_metadata?.role;
-      router.push(role === 'doctor' ? '/doctor' : '/patient');
+      const meta = data.session.user.user_metadata;
+      if (!meta?.onboarding_complete) {
+        router.push('/onboarding');
+      } else {
+        router.push(meta.role === 'doctor' ? '/doctor' : '/patient');
+      }
     } catch (error: unknown) {
       setErrorMsg(error instanceof Error ? error.message : "Unknown error");
     } finally {

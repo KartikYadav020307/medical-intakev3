@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { FileText, FolderOpen, TrendingUp, Activity } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FileText, FolderOpen, TrendingUp, Activity, Trash2, Download } from "lucide-react";
 
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
@@ -21,6 +22,7 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
 type MedicalRecord = {
   id: string;
   created_at: string;
+  pdf_url?: string | null;
   extracted_data?: Partial<ExtractionData> | null;
 };
 
@@ -33,9 +35,30 @@ type MasterTimelineEvent = {
 };
 
 export default function PatientDashboard() {
+  const router = useRouter();
+  const [isOnboarded, setIsOnboarded] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("upload");
   const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
+  const [recordToDelete, setRecordToDelete] = useState<MedicalRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // ── Onboarding Gate ─────────────────────────────────────────────────
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/onboarding");
+        return;
+      }
+      if (user.user_metadata?.onboarding_complete === true) {
+        setIsOnboarded(true);
+      } else {
+        router.push("/onboarding");
+      }
+    };
+    checkOnboarding();
+  }, [router]);
 
   // ── Derived Master Timeline ─────────────────────────────────────────
   const masterTimeline = React.useMemo(() => {
@@ -137,7 +160,9 @@ export default function PatientDashboard() {
 
   // ── Extraction state ───────────────────────────────────────────────
   const [loadedPdfUrl, setLoadedPdfUrl] = useState<string | null>(null);
-  const [expectedIdentity, setExpectedIdentity] = useState<{ name: string; dob: string } | null>(null);
+  const [expectedIdentity, setExpectedIdentity] = useState<{
+    name: string; dob: string; sex: string; bloodType: string; language: string;
+  } | null>(null);
   const [extractionData, setExtractionData] = useState<ExtractionData | null>(
     null,
   );
@@ -164,7 +189,15 @@ export default function PatientDashboard() {
 
 
   // ── Core extraction function ───────────────────────────────────────
-  const processDocument = useCallback(async (pdfUrl: string, expectedPatientName?: string, expectedDob?: string, fileHash?: string) => {
+  const processDocument = useCallback(async (
+    pdfUrl: string,
+    expectedPatientName?: string,
+    expectedDob?: string,
+    fileHash?: string,
+    expectedSex?: string,
+    expectedBloodType?: string,
+    expectedLanguage?: string
+  ) => {
     setIsProcessing(true);
     setExtractionData(null);
     setActiveHighlight(null);
@@ -173,9 +206,18 @@ export default function PatientDashboard() {
     // If expected identity is explicitly passed, use it and update state, otherwise use state for retries
     const finalPatientName = expectedPatientName ?? expectedIdentity?.name;
     const finalDob = expectedDob ?? expectedIdentity?.dob;
+    const finalSex = expectedSex ?? expectedIdentity?.sex;
+    const finalBloodType = expectedBloodType ?? expectedIdentity?.bloodType;
+    const finalLanguage = expectedLanguage ?? expectedIdentity?.language;
 
     if (expectedPatientName && expectedDob) {
-      setExpectedIdentity({ name: expectedPatientName, dob: expectedDob });
+      setExpectedIdentity({
+        name: expectedPatientName,
+        dob: expectedDob,
+        sex: expectedSex || "Unknown",
+        bloodType: expectedBloodType || "Unknown",
+        language: expectedLanguage || "English",
+      });
     }
 
     try {
@@ -185,7 +227,10 @@ export default function PatientDashboard() {
         body: JSON.stringify({ 
           pdfUrl, 
           expectedPatientName: finalPatientName, 
-          expectedDob: finalDob 
+          expectedDob: finalDob,
+          expectedSex: finalSex,
+          expectedBloodType: finalBloodType,
+          expectedLanguage: finalLanguage,
         }),
       });
 
@@ -234,12 +279,49 @@ export default function PatientDashboard() {
 
   // ── Upload complete handler — triggers extraction automatically ────
   const handleUploadComplete = useCallback(
-    (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string) => {
+    (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string, expectedSex: string, expectedBloodType: string, expectedLanguage: string) => {
       setLoadedPdfUrl(downloadUrl);
-      processDocument(downloadUrl, expectedPatientName, expectedDob, fileHash);
+      processDocument(downloadUrl, expectedPatientName, expectedDob, fileHash, expectedSex, expectedBloodType, expectedLanguage);
     },
     [processDocument],
   );
+
+  // ── Hard Delete handler ─────────────────────────────────────────────
+  const handleDeleteRecord = useCallback(async () => {
+    if (!recordToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/records/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({
+          recordId: recordToDelete.id,
+          pdfUrl: recordToDelete.pdf_url,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Delete failed.");
+      }
+
+      // Domino Effect: filtering patientHistory re-triggers masterTimeline + analyticsData
+      setPatientHistory((prev) => prev.filter((r) => r.id !== recordToDelete.id));
+      setToast({ message: "Record permanently deleted", type: "success" });
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setToast({ message: err instanceof Error ? err.message : "Failed to delete record", type: "error" });
+    } finally {
+      setRecordToDelete(null);
+      setIsDeleting(false);
+    }
+  }, [recordToDelete]);
 
   const renderMasterTimeline = () => (
     masterTimeline.length === 0 ? (
@@ -266,6 +348,15 @@ export default function PatientDashboard() {
       />
     )
   );
+
+  // ── Full-screen loading spinner while identity check is in flight ──
+  if (!isOnboarded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
@@ -432,7 +523,7 @@ export default function PatientDashboard() {
                     const lCount = data?.labResults?.length || 0;
                     
                     return (
-                      <div key={record.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
+                      <div key={record.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1 group">
                         <div className="flex items-start justify-between mb-4">
                           <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors shadow-inner">
                             <FileText className="w-6 h-6" />
@@ -445,6 +536,19 @@ export default function PatientDashboard() {
                         <p className="text-sm text-slate-500 mt-2 line-clamp-2">
                           Contains <span className="font-medium text-slate-700">{dCount}</span> diagnoses, <span className="font-medium text-slate-700">{mCount}</span> medications, and <span className="font-medium text-slate-700">{lCount}</span> labs.
                         </p>
+                        {/* Action row */}
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                          {record.pdf_url && (
+                            <a href={record.pdf_url} target="_blank" rel="noopener noreferrer"
+                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+                              <Download className="w-3.5 h-3.5" /> Download
+                            </a>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); setRecordToDelete(record); }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors ml-auto cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -583,6 +687,33 @@ export default function PatientDashboard() {
         extractionData={extractionData}
         onItemClick={(box) => setActiveHighlight(box)}
       />
+
+      {/* Delete Confirmation Modal */}
+      {recordToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200/60">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-5 border border-red-100">
+              <Trash2 className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">Delete Medical Record?</h3>
+            <p className="text-sm text-slate-500 mt-3 leading-relaxed">
+              Are you sure? This action cannot be undone. The document will be permanently
+              deleted and all associated diagnoses, medications, and labs will be instantly
+              removed from your Timeline and Analytics.
+            </p>
+            <div className="flex items-center gap-3 mt-7">
+              <button onClick={() => setRecordToDelete(null)} disabled={isDeleting}
+                      className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleDeleteRecord} disabled={isDeleting}
+                      className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 
-export default function GlobalError({
+export default function PatientError({
   error,
   reset,
 }: {
@@ -11,7 +12,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Unexpected application error:", error);
+    console.error("Patient dashboard error:", error);
   }, [error]);
 
   return (
@@ -30,24 +31,33 @@ export default function GlobalError({
         {/* Body */}
         <p className="mt-3 text-sm leading-6 text-slate-500">
           We encountered an unexpected issue while loading your medical data.
-          No information has been lost — you can safely retry.
+          Your records are safe — please try again.
         </p>
 
-        {/* Digest (dev aid — hidden from patients) */}
+        {/* Digest (dev aid) */}
         {error.digest && (
           <p className="mt-2 font-mono text-xs text-slate-400">
             Ref: {error.digest}
           </p>
         )}
 
-        {/* CTA */}
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-        >
-          Try again
-        </button>
+        {/* Actions */}
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+          >
+            Try again
+          </button>
+
+          <Link
+            href="/"
+            className="text-sm font-medium text-slate-400 transition-colors hover:text-slate-600"
+          >
+            Return to home
+          </Link>
+        </div>
       </div>
     </main>
   );

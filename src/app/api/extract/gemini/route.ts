@@ -514,7 +514,8 @@ const CONFLICT_SCHEMA = {
 
 // ---------------------------------------------------------------------------
 // System instruction
-const SYSTEM_INSTRUCTION = `You are a medical document analysis AI specializing in extracting structured clinical data from PDF documents.
+function buildSystemInstruction(sex: string, bloodType: string, language: string): string {
+  return `You are a medical document analysis AI specializing in extracting structured clinical data from PDF documents.
 
 TASK:
 Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, lab results, allergies, procedures, vitals (e.g., blood pressure, heart rate, temperature), attending physicians (name and role/specialty), ICD-10 codes (code and description), family medical history, social history (smoking/alcohol), and imaging/radiology findings.
@@ -536,6 +537,7 @@ EXTRACTION RULES:
 - Extract social history for smoking and alcohol use. Record the category, current status (e.g., "Current smoker", "Former", "Never"), and any additional details (e.g., "1 pack/day for 20 years").
 - Extract imaging and radiology findings including the body part examined, the finding/impression, and confidence level.
 - For lab results, explicitly evaluate the reported value against standard clinical reference ranges and set isAbnormal to true if the value falls outside normal limits, false otherwise. If no reference range is available, use standard medical reference ranges.
+- CRITICAL: The patient's biological sex is ${sex}, blood type is ${bloodType}, and primary language is ${language}. You MUST use this biological sex when evaluating lab result reference ranges to determine if the isAbnormal flag should be true or false. (e.g., Creatinine and Hemoglobin have different normal ranges for males vs. females). Use the primary language to assist with accurate translation if the document is not in English.
 - If a category has no data in the document, return an empty array for that category.
 - For confidence: use "High" for clearly and unambiguously stated items, "Medium" for probable items, "Low" for ambiguous or partially legible items.
 - For dosage and frequency: use an empty string "" if the information is not specified in the document.
@@ -543,6 +545,7 @@ EXTRACTION RULES:
 
 OUTPUT:
 Return ONLY the structured JSON object. No explanations, no markdown, no commentary.`;
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/extract/gemini
@@ -555,9 +558,15 @@ export async function POST(
   let pdfUrl: string;
   let expectedPatientName: string | undefined;
   let expectedDob: string | undefined;
+  let expectedSex: string | undefined;
+  let expectedBloodType: string | undefined;
+  let expectedLanguage: string | undefined;
 
   try {
-    const body = (await request.json()) as { pdfUrl?: unknown; expectedPatientName?: unknown; expectedDob?: unknown };
+    const body = (await request.json()) as {
+      pdfUrl?: unknown; expectedPatientName?: unknown; expectedDob?: unknown;
+      expectedSex?: unknown; expectedBloodType?: unknown; expectedLanguage?: unknown;
+    };
     if (!body.pdfUrl || typeof body.pdfUrl !== "string") {
       return NextResponse.json(
         { success: false, error: "Missing or invalid 'pdfUrl' in request body." },
@@ -567,6 +576,9 @@ export async function POST(
     pdfUrl = body.pdfUrl;
     expectedPatientName = typeof body.expectedPatientName === "string" ? body.expectedPatientName : undefined;
     expectedDob = typeof body.expectedDob === "string" ? body.expectedDob : undefined;
+    expectedSex = typeof body.expectedSex === "string" ? body.expectedSex : undefined;
+    expectedBloodType = typeof body.expectedBloodType === "string" ? body.expectedBloodType : undefined;
+    expectedLanguage = typeof body.expectedLanguage === "string" ? body.expectedLanguage : undefined;
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid JSON in request body." },
@@ -654,7 +666,7 @@ export async function POST(
 
   // ── 3.5  Fast-fail pre-check: classify document ────────────────────
   try {
-    const triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
+    const triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}, Biological Sex: ${expectedSex || 'Unknown'}, Blood Type: ${expectedBloodType || 'Unknown'}, Primary Language: ${expectedLanguage || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
 
     const triageResponse = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -736,7 +748,11 @@ export async function POST(
         },
       ],
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: buildSystemInstruction(
+          expectedSex || "Unknown",
+          expectedBloodType || "Unknown",
+          expectedLanguage || "Unknown"
+        ),
         responseMimeType: "application/json",
         responseSchema: EXTRACTION_SCHEMA,
       },

@@ -13,7 +13,15 @@ async function generateFileHash(file: File): Promise<string> {
 }
 
 interface UploadHeroProps {
-  onUploadComplete?: (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string) => void;
+  onUploadComplete?: (
+    downloadUrl: string,
+    expectedPatientName: string,
+    expectedDob: string,
+    fileHash: string,
+    expectedSex: string,
+    expectedBloodType: string,
+    expectedLanguage: string
+  ) => void;
 }
 
 export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
@@ -34,6 +42,9 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
       const { data: { user } } = await supabase.auth.getUser();
       const userName = user?.user_metadata?.name || "Unknown Patient";
       const userDob = user?.user_metadata?.dob || "Unknown Patient";
+      const userSex = user?.user_metadata?.sex || "Unknown";
+      const userBloodType = user?.user_metadata?.blood_type || "Unknown";
+      const userLanguage = user?.user_metadata?.language || "English";
 
       // Phase 2: Hash file and check for duplicates before expensive upload
       const fileHash = await generateFileHash(file);
@@ -68,7 +79,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         .getPublicUrl(fileName);
 
       setUploadedFileName(file.name);
-      onUploadComplete?.(urlData.publicUrl, userName, userDob, fileHash);
+      onUploadComplete?.(urlData.publicUrl, userName, userDob, fileHash, userSex, userBloodType, userLanguage);
     } catch (err) {
       console.error("Upload failed:", err);
       const msg =
