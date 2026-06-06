@@ -19,6 +19,8 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
   ssr: false,
 });
 
+import ShareLinkModal from "./components/ShareLinkModal";
+
 type MedicalRecord = {
   id: string;
   created_at: string;
@@ -42,6 +44,7 @@ export default function PatientDashboard() {
   const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
   const [recordToDelete, setRecordToDelete] = useState<MedicalRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // ── Onboarding Gate ─────────────────────────────────────────────────
   useEffect(() => {
@@ -387,7 +390,7 @@ export default function PatientDashboard() {
           sidebarCollapsed ? "ml-16" : "ml-56"
         }`}
       >
-        <TopBar />
+        <TopBar onShareClick={() => setIsShareModalOpen(true)} />
 
         {/* Single-column dashboard canvas */}
         <div className="p-8 flex flex-col gap-5 max-w-5xl mx-auto w-full">
@@ -714,6 +717,14 @@ export default function PatientDashboard() {
           </div>
         </div>
       )}
+
+      {/* Share Link Modal */}
+      <ShareLinkModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onSuccess={(message) => setToast({ message, type: "success" })}
+        onError={(message) => setToast({ message, type: "error" })}
+      />
     </div>
   );
 }

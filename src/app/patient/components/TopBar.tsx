@@ -5,7 +5,11 @@ import { Search, Bell, Settings, FileDown, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 
-export default function TopBar() {
+interface TopBarProps {
+  onShareClick?: () => void;
+}
+
+export default function TopBar({ onShareClick }: TopBarProps) {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
 
@@ -75,7 +79,10 @@ export default function TopBar() {
           <FileDown className="w-4 h-4" />
           Export PDF
         </button>
-        <button className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2">
+        <button
+          onClick={onShareClick}
+          className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2"
+        >
           <Share2 className="w-4 h-4" />
           Share Summary
         </button>
