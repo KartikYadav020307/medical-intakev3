@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "../../../../lib/supabase";
-import type { MedicalRecord } from "../page";
+import type { MedicalRecord, AppNotification } from "../page";
 
 interface TopBarProps {
   onShareClick?: () => void;
@@ -16,14 +16,18 @@ interface TopBarProps {
   isExporting?: boolean;
   records?: MedicalRecord[];
   onSearchResultClick?: (record: MedicalRecord, boundingBox: [number, number, number, number]) => void;
+  notifications?: AppNotification[];
+  onNotificationClick?: (notification: AppNotification) => void;
 }
 
-export default function TopBar({ onShareClick, onExportPdf, isExporting, records, onSearchResultClick }: TopBarProps) {
+export default function TopBar({ onShareClick, onExportPdf, isExporting, records, onSearchResultClick, notifications = [], onNotificationClick }: TopBarProps) {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -57,6 +61,9 @@ export default function TopBar({ onShareClick, onExportPdf, isExporting, records
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -204,9 +211,78 @@ export default function TopBar({ onShareClick, onExportPdf, isExporting, records
 
       {/* Right: Actions & Profile */}
       <div className="flex items-center gap-3">
-        <button className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150">
-          <Bell className="w-5 h-5" />
-        </button>
+        <div className="relative" ref={notificationsRef}>
+          <button 
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150 relative"
+          >
+            <Bell className="w-5 h-5" />
+            {notifications.some(n => !n.read) && (
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            )}
+          </button>
+          
+          <AnimatePresence>
+            {isNotificationsOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute top-full right-0 mt-2 w-80 bg-white border border-slate-200/60 rounded-2xl shadow-xl overflow-hidden z-50 flex flex-col"
+              >
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <h3 className="font-semibold text-slate-800">Notifications</h3>
+                  <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                    {notifications.filter(n => !n.read).length} new
+                  </span>
+                </div>
+                
+                {notifications.length > 0 ? (
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        onClick={() => {
+                          if (onNotificationClick) {
+                            onNotificationClick(notification);
+                          }
+                          setIsNotificationsOpen(false);
+                        }}
+                        className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex gap-3 ${!notification.read ? 'bg-slate-50/50' : ''}`}
+                      >
+                        <div className="shrink-0 mt-0.5">
+                          {notification.type === 'warning' ? (
+                            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
+                          ) : notification.type === 'error' ? (
+                            <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><Bell className="w-4 h-4" /></div>
+                          )}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-semibold ${!notification.read ? 'text-slate-900' : 'text-slate-600'}`}>{notification.title}</p>
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notification.message}</p>
+                        </div>
+                        {!notification.read && (
+                          <div className="ml-auto shrink-0 mt-1">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-500">
+                    <Bell className="w-8 h-8 mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm font-medium">No notifications</p>
+                    <p className="text-xs mt-1">You&apos;re all caught up!</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         <button className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150">
           <Settings className="w-5 h-5" />
         </button>

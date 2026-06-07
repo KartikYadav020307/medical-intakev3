@@ -32,6 +32,15 @@ export type MedicalRecord = {
   extracted_data?: Partial<ExtractionData> | null;
 };
 
+export type AppNotification = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "warning" | "error" | "success";
+  read: boolean;
+  relatedRecordId?: string;
+};
+
 type MasterTimelineEvent = {
   type: "diagnosis" | "medication" | "lab";
   title: string;
@@ -50,6 +59,7 @@ export default function PatientDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // ── Onboarding Gate ─────────────────────────────────────────────────
   useEffect(() => {
@@ -268,6 +278,53 @@ export default function PatientDashboard() {
 
       setExtractionData(result.data);
 
+      // --- L2 Alert Notification Logic ---
+      const newNotifications: AppNotification[] = [];
+      let abnormalCount = 0;
+
+      result.data.labResults?.forEach((lab: { isAbnormal?: boolean }) => {
+        if (lab.isAbnormal) abnormalCount++;
+      });
+
+      const docName = pdfUrl.split('/').pop() || "Document";
+
+      if (abnormalCount > 0) {
+        newNotifications.push({
+          id: `alert-warn-${Date.now()}`,
+          title: "Abnormal Lab Detected",
+          message: `⚠️ ${abnormalCount} Abnormal Lab(s) Detected in ${docName}`,
+          type: "warning",
+          read: false,
+          relatedRecordId: pdfUrl,
+        });
+      }
+
+      const allergyConflict = result.data.safetyAlerts?.conflictFound;
+      if (allergyConflict) {
+        newNotifications.push({
+          id: `alert-err-${Date.now()}`,
+          title: "Safety Alert",
+          message: result.data.safetyAlerts?.description || "Allergy conflict detected.",
+          type: "error",
+          read: false,
+          relatedRecordId: pdfUrl,
+        });
+      }
+
+      if (abnormalCount === 0 && !allergyConflict) {
+        newNotifications.push({
+          id: `alert-succ-${Date.now()}`,
+          title: "Document Processed",
+          message: `No critical alerts found in ${docName}`,
+          type: "success",
+          read: false,
+          relatedRecordId: pdfUrl,
+        });
+      }
+
+      setNotifications((prev) => [...newNotifications, ...prev]);
+      // ------------------------------------
+
       // Safe DB Injection
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -275,14 +332,18 @@ export default function PatientDashboard() {
           throw new Error("No authenticated user found for database save.");
         }
 
-        const { error: insertError } = await supabase.from('medical_records').insert([{
+        const { data: insertData, error: insertError } = await supabase.from('medical_records').insert([{
           user_id: user.id,
           pdf_url: pdfUrl,
           extracted_data: result.data,
           ...(fileHash && { file_hash: fileHash }),
-        }]);
+        }]).select();
 
         if (insertError) throw insertError;
+
+        if (insertData && insertData.length > 0) {
+          setPatientHistory((prev) => [insertData[0] as MedicalRecord, ...prev]);
+        }
 
         setToast({ message: "Saved to secure database", type: "success" });
       } catch (dbError) {
@@ -357,6 +418,27 @@ export default function PatientDashboard() {
     setIsModalOpen(true);
   }, []);
 
+  // ── Notification Click Handler ──────────────────────────────────────
+  const handleNotificationClick = useCallback((notification: AppNotification) => {
+    setNotifications((prev) => prev.map((n) => n.id === notification.id ? { ...n, read: true } : n));
+    
+    if (notification.relatedRecordId) {
+      const record = patientHistory.find((r) => r.pdf_url === notification.relatedRecordId);
+      if (record) {
+        let boundingBox: [number, number, number, number] | null = null;
+        if (notification.type === 'warning') {
+          const abnormalLab = record.extracted_data?.labResults?.find((l) => l.isAbnormal);
+          if (abnormalLab) boundingBox = abnormalLab.boundingBox;
+        } else if (notification.type === 'error') {
+          const allergy = record.extracted_data?.allergies?.[0];
+          if (allergy) boundingBox = allergy.boundingBox;
+        }
+        handleSearchResultClick(record, boundingBox || [0, 0, 0, 0]);
+      }
+    }
+  }, [patientHistory, handleSearchResultClick]);
+
+
   const renderMasterTimeline = () => (
     masterTimeline.length === 0 ? (
       <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
@@ -424,6 +506,8 @@ export default function PatientDashboard() {
         <TopBar
           records={patientHistory}
           onSearchResultClick={handleSearchResultClick}
+          notifications={notifications}
+          onNotificationClick={handleNotificationClick}
           onShareClick={() => setIsShareModalOpen(true)}
           onExportPdf={async () => {
             setIsExporting(true);
