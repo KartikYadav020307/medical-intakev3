@@ -25,7 +25,7 @@ const VerificationView = dynamic(() => import("./components/VerificationView"), 
   ssr: false,
 });
 
-type MedicalRecord = {
+export type MedicalRecord = {
   id: string;
   created_at: string;
   pdf_url?: string | null;
@@ -345,6 +345,18 @@ export default function PatientDashboard() {
     }
   }, [recordToDelete]);
 
+  // ── Global Search Result Handler ────────────────────────────────────
+  const handleSearchResultClick = useCallback((record: MedicalRecord, boundingBox: [number, number, number, number]) => {
+    if (record.pdf_url) {
+      setLoadedPdfUrl(record.pdf_url);
+    }
+    if (record.extracted_data) {
+      setExtractionData(record.extracted_data as ExtractionData);
+    }
+    setActiveHighlight(boundingBox);
+    setIsModalOpen(true);
+  }, []);
+
   const renderMasterTimeline = () => (
     masterTimeline.length === 0 ? (
       <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
@@ -410,6 +422,8 @@ export default function PatientDashboard() {
         }`}
       >
         <TopBar
+          records={patientHistory}
+          onSearchResultClick={handleSearchResultClick}
           onShareClick={() => setIsShareModalOpen(true)}
           onExportPdf={async () => {
             setIsExporting(true);
