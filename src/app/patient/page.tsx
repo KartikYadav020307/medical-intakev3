@@ -21,6 +21,10 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
 
 import ShareLinkModal from "./components/ShareLinkModal";
 
+const VerificationView = dynamic(() => import("./components/VerificationView"), {
+  ssr: false,
+});
+
 type MedicalRecord = {
   id: string;
   created_at: string;
@@ -45,6 +49,7 @@ export default function PatientDashboard() {
   const [recordToDelete, setRecordToDelete] = useState<MedicalRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // ── Onboarding Gate ─────────────────────────────────────────────────
   useEffect(() => {
@@ -72,22 +77,36 @@ export default function PatientDashboard() {
     const getEventKey = (event: MasterTimelineEvent) =>
       `${event.type}:${event.title.trim().toLowerCase()}`;
     patientHistory.forEach((record) => {
-      const date = new Date(record.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const data = record.extracted_data;
-      
+
+      // Prioritize AI-extracted encounter date, fallback to upload date
+      const encounterDate = data?.encounter_date;
+      const hasValidEncounterDate = encounterDate && encounterDate !== "Unknown";
+
+      const dateSource = hasValidEncounterDate
+        ? new Date(encounterDate)
+        : new Date(record.created_at);
+
+      const date = dateSource.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      // rawDate used for sorting — prefer encounter date for chronological accuracy
+      const rawDate = hasValidEncounterDate
+        ? new Date(encounterDate).toISOString()
+        : record.created_at;
+
       if (data?.diagnoses) {
         data.diagnoses.forEach((d) => {
-          events.push({ type: 'diagnosis', title: d.name, detail: `Confidence: ${d.confidence}`, date, rawDate: record.created_at });
+          events.push({ type: 'diagnosis', title: d.name, detail: `Confidence: ${d.confidence}`, date, rawDate });
         });
       }
       if (data?.medications) {
         data.medications.forEach((m) => {
-          events.push({ type: 'medication', title: m.name, detail: [m.dosage, m.frequency].filter(Boolean).join(' · '), date, rawDate: record.created_at });
+          events.push({ type: 'medication', title: m.name, detail: [m.dosage, m.frequency].filter(Boolean).join(' · '), date, rawDate });
         });
       }
       if (data?.labResults) {
         data.labResults.forEach((l) => {
-          events.push({ type: 'lab', title: l.testName, detail: `${l.value} ${l.unit || ''}`, date, rawDate: record.created_at });
+          events.push({ type: 'lab', title: l.testName, detail: `${l.value} ${l.unit || ''}`, date, rawDate });
         });
       }
     });
@@ -367,7 +386,7 @@ export default function PatientDashboard() {
         <div
           role={toast.type === "error" ? "alert" : "status"}
           aria-live={toast.type === "error" ? "assertive" : "polite"}
-          className={`fixed right-6 top-6 z-50 max-w-sm rounded-2xl border px-5 py-4 text-sm font-medium shadow-lg ${
+          className={`fixed right-6 top-6 z-[9999] max-w-sm rounded-2xl border px-5 py-4 text-sm font-medium shadow-lg ${
             toast.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : "border-red-200 bg-red-50 text-red-800"
@@ -390,10 +409,26 @@ export default function PatientDashboard() {
           sidebarCollapsed ? "ml-16" : "ml-56"
         }`}
       >
-        <TopBar onShareClick={() => setIsShareModalOpen(true)} />
+        <TopBar
+          onShareClick={() => setIsShareModalOpen(true)}
+          onExportPdf={async () => {
+            setIsExporting(true);
+            try {
+              const { generateDossier } = await import("../../utils/generateDossier");
+              await generateDossier(masterTimeline);
+              setToast({ message: "Clinical dossier downloaded", type: "success" });
+            } catch (err) {
+              console.error("PDF generation failed:", err);
+              setToast({ message: err instanceof Error ? err.message : "Failed to generate PDF", type: "error" });
+            } finally {
+              setIsExporting(false);
+            }
+          }}
+          isExporting={isExporting}
+        />
 
         {/* Single-column dashboard canvas */}
-        <div className="p-8 flex flex-col gap-5 max-w-5xl mx-auto w-full">
+        <div className={`p-8 flex flex-col gap-5 mx-auto w-full ${activeTab === "verification" ? "" : "max-w-5xl"}`}>
           {activeTab === "upload" && (
             <>
               {/* Compact upload zone */}
@@ -571,6 +606,14 @@ export default function PatientDashboard() {
             </div>
           )}
 
+          {activeTab === "verification" && (
+            <VerificationView
+              records={patientHistory}
+              onRecordsUpdate={setPatientHistory}
+              onToast={(message, type) => setToast({ message, type })}
+            />
+          )}
+
           {activeTab === "analytics" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-8">
@@ -666,7 +709,7 @@ export default function PatientDashboard() {
             </div>
           )}
 
-          {(!["upload", "records", "timeline", "analytics"].includes(activeTab)) && (
+          {(!["upload", "records", "timeline", "analytics", "verification"].includes(activeTab)) && (
             <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200/60 shadow-sm mt-8 animate-in fade-in duration-500">
               <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
                 <FolderOpen className="w-8 h-8 text-slate-400" />

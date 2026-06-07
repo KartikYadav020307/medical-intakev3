@@ -87,6 +87,7 @@ interface ImagingFindingItem {
 }
 
 interface GeminiExtractionResult {
+  encounter_date: string;
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
@@ -124,6 +125,11 @@ interface ErrorResponse {
 const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
+    encounter_date: {
+      type: "string",
+      description:
+        "The date of the medical encounter, visit, or when the document was authored. Actively search for headers like 'Date of Visit', 'Date of Service', 'Report Date', 'Encounter Date', 'Date of Exam', or any document-level date. Use YYYY-MM-DD format. If no date can be determined, return 'Unknown'.",
+    },
     diagnoses: {
       type: "array",
       description: "List of medical diagnoses found in the document.",
@@ -463,7 +469,7 @@ const EXTRACTION_SCHEMA = {
       },
     },
   },
-  required: ["diagnoses", "medications", "labResults", "allergies", "procedures", "vitals", "physicians", "icdCodes", "familyHistory", "socialHistory", "imagingFindings"],
+  required: ["encounter_date", "diagnoses", "medications", "labResults", "allergies", "procedures", "vitals", "physicians", "icdCodes", "familyHistory", "socialHistory", "imagingFindings"],
 } as const;
 
 const PRECHECK_SCHEMA = {
@@ -542,6 +548,7 @@ EXTRACTION RULES:
 - For confidence: use "High" for clearly and unambiguously stated items, "Medium" for probable items, "Low" for ambiguous or partially legible items.
 - For dosage and frequency: use an empty string "" if the information is not specified in the document.
 - For lab result units: use an empty string "" if not specified.
+- ENCOUNTER DATE: Actively search for the date of the medical encounter, visit, or when the document was created/authored. Look for headers like "Date of Visit", "Date of Service", "Report Date", "Encounter Date", "Date of Exam", or any document-level date. Return in YYYY-MM-DD format. If no date can be determined, return "Unknown".
 
 OUTPUT:
 Return ONLY the structured JSON object. No explanations, no markdown, no commentary.`;
@@ -782,6 +789,7 @@ export async function POST(
 
     // Ensure all expected arrays exist (defensive)
     const data: GeminiExtractionResult = {
+      encounter_date: typeof parsed.encounter_date === "string" ? parsed.encounter_date : "Unknown",
       diagnoses: Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
       medications: Array.isArray(parsed.medications) ? parsed.medications : [],
       labResults: Array.isArray(parsed.labResults) ? parsed.labResults : [],

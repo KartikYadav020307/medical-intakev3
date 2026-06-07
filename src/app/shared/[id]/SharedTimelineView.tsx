@@ -86,12 +86,26 @@ export default function SharedTimelineView({
       `${event.type}:${event.title.trim().toLowerCase()}`;
 
     records.forEach((record) => {
-      const date = new Date(record.created_at).toLocaleDateString("en-US", {
+      const data = record.extracted_data;
+
+      // Prioritize AI-extracted encounter date, fallback to upload date
+      const encounterDate = data?.encounter_date;
+      const hasValidEncounterDate = encounterDate && encounterDate !== "Unknown";
+
+      const dateSource = hasValidEncounterDate
+        ? new Date(encounterDate)
+        : new Date(record.created_at);
+
+      const date = dateSource.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
-      const data = record.extracted_data;
+
+      // rawDate used for sorting — prefer encounter date for chronological accuracy
+      const rawDate = hasValidEncounterDate
+        ? new Date(encounterDate).toISOString()
+        : record.created_at;
 
       if (data?.diagnoses) {
         data.diagnoses.forEach((d) => {
@@ -100,7 +114,7 @@ export default function SharedTimelineView({
             title: d.name,
             detail: `Confidence: ${d.confidence}`,
             date,
-            rawDate: record.created_at,
+            rawDate,
           });
         });
       }
@@ -111,7 +125,7 @@ export default function SharedTimelineView({
             title: m.name,
             detail: [m.dosage, m.frequency].filter(Boolean).join(" · "),
             date,
-            rawDate: record.created_at,
+            rawDate,
           });
         });
       }
@@ -122,7 +136,7 @@ export default function SharedTimelineView({
             title: l.testName,
             detail: `${l.value} ${l.unit || ""}`,
             date,
-            rawDate: record.created_at,
+            rawDate,
           });
         });
       }

@@ -90,7 +90,21 @@ export default function PdfViewer({
         className="flex-1 w-full h-full overflow-auto flex justify-center bg-gray-100 pt-20 pb-12 px-8"
       >
         <Document
-          file={`/api/proxy-pdf?url=${encodeURIComponent(pdfUrl)}`}
+          file={`/api/proxy-pdf?url=${encodeURIComponent(
+            encodeURI(
+              (() => {
+                let decoded = pdfUrl;
+                try {
+                  while (decoded !== decodeURIComponent(decoded)) {
+                    decoded = decodeURIComponent(decoded);
+                  }
+                } catch {
+                  // ignore
+                }
+                return decoded;
+              })()
+            )
+          )}`}
           onLoadSuccess={({ numPages: n }) => setNumPages(n)}
           loading={
             <div className="flex items-center gap-2 mt-20 text-on-surface-variant">

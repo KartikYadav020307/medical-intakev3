@@ -8,7 +8,17 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(url);
+    let decodedUrl = url;
+    try {
+      while (decodedUrl !== decodeURIComponent(decodedUrl)) {
+        decodedUrl = decodeURIComponent(decodedUrl);
+      }
+    } catch {
+      // ignore
+    }
+    const finalUrl = encodeURI(decodedUrl);
+
+    const response = await fetch(finalUrl);
     
     if (!response.ok) {
       return NextResponse.json(

@@ -12,6 +12,8 @@
     "@google-cloud/documentai": "^9.6.1",
     "@google/genai": "^2.2.0",
     "@supabase/supabase-js": "^2.105.4",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.14.0",
     "motion": "^12.38.0",
     "next": "^16.2.6",

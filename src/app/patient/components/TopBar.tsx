@@ -1,15 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Search, Bell, Settings, FileDown, Share2 } from "lucide-react";
+import { Search, Bell, Settings, FileDown, Share2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 
 interface TopBarProps {
   onShareClick?: () => void;
+  onExportPdf?: () => Promise<void>;
+  isExporting?: boolean;
 }
 
-export default function TopBar({ onShareClick }: TopBarProps) {
+export default function TopBar({ onShareClick, onExportPdf, isExporting }: TopBarProps) {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
 
@@ -75,9 +77,17 @@ export default function TopBar({ onShareClick }: TopBarProps) {
 
         <div className="h-6 w-px bg-document-border mx-2" />
 
-        <button className="px-4 py-2 border border-document-border rounded-lg text-primary hover:bg-surface-container-low transition-colors text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2">
-          <FileDown className="w-4 h-4" />
-          Export PDF
+        <button
+          onClick={onExportPdf}
+          disabled={isExporting}
+          className="px-4 py-2 border border-document-border rounded-lg text-primary hover:bg-surface-container-low transition-colors text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <FileDown className="w-4 h-4" />
+          )}
+          {isExporting ? "Generating..." : "Export PDF"}
         </button>
         <button
           onClick={onShareClick}

@@ -11,6 +11,7 @@ interface DiagnosisItem {
   name: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface MedicationItem {
@@ -19,6 +20,7 @@ interface MedicationItem {
   frequency: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface LabResultItem {
@@ -28,6 +30,7 @@ interface LabResultItem {
   isAbnormal?: boolean;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface AllergyItem {
@@ -37,6 +40,7 @@ interface AllergyItem {
   source_page?: number;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface ProcedureItem {
@@ -46,6 +50,7 @@ interface ProcedureItem {
   source_page?: number;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface VitalItem {
@@ -54,6 +59,7 @@ interface VitalItem {
   unit?: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface PhysicianItem {
@@ -61,6 +67,7 @@ interface PhysicianItem {
   specialty?: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface IcdCodeItem {
@@ -68,6 +75,7 @@ interface IcdCodeItem {
   description?: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 interface FamilyHistoryItem {
@@ -86,9 +94,11 @@ interface ImagingFindingItem {
   finding: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
+  verified_by?: string;
 }
 
 export interface ExtractionData {
+  encounter_date?: string;
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
