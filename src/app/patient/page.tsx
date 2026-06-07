@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, FolderOpen, TrendingUp, Activity, Trash2, Download } from "lucide-react";
 
@@ -59,7 +59,63 @@ export default function PatientDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+
+  // ── Load Notification Read State ─────────────────────────────────────
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("readNotificationIds");
+      if (stored) {
+        // eslint-disable-next-line
+        setReadNotificationIds(new Set(JSON.parse(stored)));
+      }
+    } catch (err) {
+      console.error("Failed to load read notifications state:", err);
+    }
+  }, []);
+
+  // ── Global L2 Alert Scanner ─────────────────────────────────────────
+  const notifications = useMemo<AppNotification[]>(() => {
+    const newNotifications: AppNotification[] = [];
+
+    patientHistory.forEach((record) => {
+      if (!record.extracted_data) return;
+      const data = record.extracted_data;
+      const docName = record.pdf_url ? record.pdf_url.split("/").pop() : "Document";
+
+      let abnormalCount = 0;
+      data.labResults?.forEach((lab: { isAbnormal?: boolean }) => {
+        if (lab.isAbnormal) abnormalCount++;
+      });
+
+      if (abnormalCount > 0) {
+        const id = `alert-warn-${record.id}`;
+        newNotifications.push({
+          id,
+          title: "Abnormal Lab Detected",
+          message: `⚠️ ${abnormalCount} Abnormal Lab(s) Detected in ${docName}`,
+          type: "warning",
+          read: readNotificationIds.has(id),
+          relatedRecordId: record.id,
+        });
+      }
+
+      const allergyConflict = data.safetyAlerts?.conflictFound;
+      if (allergyConflict) {
+        const id = `alert-err-${record.id}`;
+        newNotifications.push({
+          id,
+          title: "Safety Alert",
+          message: data.safetyAlerts?.description || "Allergy conflict detected.",
+          type: "error",
+          read: readNotificationIds.has(id),
+          relatedRecordId: record.id,
+        });
+      }
+    });
+
+    return newNotifications;
+  }, [patientHistory, readNotificationIds]);
 
   // ── Onboarding Gate ─────────────────────────────────────────────────
   useEffect(() => {
@@ -278,53 +334,6 @@ export default function PatientDashboard() {
 
       setExtractionData(result.data);
 
-      // --- L2 Alert Notification Logic ---
-      const newNotifications: AppNotification[] = [];
-      let abnormalCount = 0;
-
-      result.data.labResults?.forEach((lab: { isAbnormal?: boolean }) => {
-        if (lab.isAbnormal) abnormalCount++;
-      });
-
-      const docName = pdfUrl.split('/').pop() || "Document";
-
-      if (abnormalCount > 0) {
-        newNotifications.push({
-          id: `alert-warn-${Date.now()}`,
-          title: "Abnormal Lab Detected",
-          message: `⚠️ ${abnormalCount} Abnormal Lab(s) Detected in ${docName}`,
-          type: "warning",
-          read: false,
-          relatedRecordId: pdfUrl,
-        });
-      }
-
-      const allergyConflict = result.data.safetyAlerts?.conflictFound;
-      if (allergyConflict) {
-        newNotifications.push({
-          id: `alert-err-${Date.now()}`,
-          title: "Safety Alert",
-          message: result.data.safetyAlerts?.description || "Allergy conflict detected.",
-          type: "error",
-          read: false,
-          relatedRecordId: pdfUrl,
-        });
-      }
-
-      if (abnormalCount === 0 && !allergyConflict) {
-        newNotifications.push({
-          id: `alert-succ-${Date.now()}`,
-          title: "Document Processed",
-          message: `No critical alerts found in ${docName}`,
-          type: "success",
-          read: false,
-          relatedRecordId: pdfUrl,
-        });
-      }
-
-      setNotifications((prev) => [...newNotifications, ...prev]);
-      // ------------------------------------
-
       // Safe DB Injection
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -420,10 +429,19 @@ export default function PatientDashboard() {
 
   // ── Notification Click Handler ──────────────────────────────────────
   const handleNotificationClick = useCallback((notification: AppNotification) => {
-    setNotifications((prev) => prev.map((n) => n.id === notification.id ? { ...n, read: true } : n));
+    // 1. Persist Read State
+    const newReadIds = new Set(readNotificationIds);
+    newReadIds.add(notification.id);
+    setReadNotificationIds(newReadIds);
+    try {
+      localStorage.setItem("readNotificationIds", JSON.stringify(Array.from(newReadIds)));
+    } catch (err) {
+      console.error("Failed to save read notification state:", err);
+    }
     
+    // 2. Deep Link
     if (notification.relatedRecordId) {
-      const record = patientHistory.find((r) => r.pdf_url === notification.relatedRecordId);
+      const record = patientHistory.find((r) => r.id === notification.relatedRecordId);
       if (record) {
         let boundingBox: [number, number, number, number] | null = null;
         if (notification.type === 'warning') {
@@ -436,7 +454,7 @@ export default function PatientDashboard() {
         handleSearchResultClick(record, boundingBox || [0, 0, 0, 0]);
       }
     }
-  }, [patientHistory, handleSearchResultClick]);
+  }, [patientHistory, handleSearchResultClick, readNotificationIds]);
 
 
   const renderMasterTimeline = () => (
