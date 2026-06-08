@@ -27,9 +27,10 @@ interface SidebarProps {
   onToggle: () => void;
   activeTab: string;
   onTabChange: (id: string) => void;
+  onHelpClick?: () => void;
 }
 
-export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, onHelpClick }: SidebarProps) {
   const router = useRouter();
 
   const handleSignOut = () => {
@@ -93,6 +94,10 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange }:
       <div className="flex flex-col gap-2 pt-4 pb-4 border-t border-document-border px-3">
         <a
           href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            onHelpClick?.();
+          }}
           title={collapsed ? "Help Center" : undefined}
           className="flex items-center rounded-lg overflow-hidden transition-colors duration-200 cursor-pointer text-on-surface-variant hover:bg-surface-variant h-10 w-full px-2.5"
         >

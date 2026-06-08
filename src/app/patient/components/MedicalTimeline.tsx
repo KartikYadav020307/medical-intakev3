@@ -144,7 +144,7 @@ export default function MedicalTimeline({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.05 * i, duration: 0.3 }}
                 onClick={() => onItemClick(entry.boundingBox)}
-                className={`group relative flex items-center gap-4 w-full text-left px-4 py-3 rounded-xl border border-document-border bg-surface transition-all duration-200 cursor-pointer active:scale-[0.995] hover:bg-surface-container-low ${meta.hoverBorder}`}
+                className={`group relative flex items-center gap-4 w-full text-left px-4 py-3 rounded-xl border border-document-border bg-surface transition-all duration-200 cursor-pointer active:scale-[0.995] hover:bg-surface-container-low ${meta.hoverBorder} ${i === 0 ? "tour-timeline-card" : ""}`}
               >
                 {/* Dot on the timeline line */}
                 <span

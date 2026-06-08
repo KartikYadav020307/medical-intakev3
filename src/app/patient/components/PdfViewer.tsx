@@ -122,7 +122,7 @@ export default function PdfViewer({
           }
         >
           {/* Wrapper with relative positioning for overlay alignment */}
-          <div className="relative inline-block shadow-2xl bg-white border border-document-border">
+          <div className="relative inline-block shadow-2xl bg-white border border-document-border tour-pdf-viewer">
             <Page
               pageNumber={1}
               width={containerWidth} // Dynamic responsive width

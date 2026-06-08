@@ -22,6 +22,8 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
 import ShareLinkModal from "./components/ShareLinkModal";
 import ProfileSettingsModal from "./components/ProfileSettingsModal";
 import GatekeeperSettingsModal from "./components/GatekeeperSettingsModal";
+import CitationTour from "./components/CitationTour";
+import { dummyMedicalRecord } from "./components/tourMockData";
 
 const VerificationView = dynamic(() => import("./components/VerificationView"), {
   ssr: false,
@@ -64,6 +66,7 @@ export default function PatientDashboard() {
   const [isGatekeeperModalOpen, setIsGatekeeperModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+  const [isTourActive, setIsTourActive] = useState(false);
 
   // ── Load Notification Read State ─────────────────────────────────────
   useEffect(() => {
@@ -279,6 +282,32 @@ export default function PatientDashboard() {
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
 
+
+  // ── Tour Handlers ──────────────────────────────────────────────────
+  const handleHelpClick = useCallback(() => {
+    setLoadedPdfUrl(dummyMedicalRecord.pdf_url);
+    setExtractionData(dummyMedicalRecord.extracted_data as ExtractionData);
+    setActiveHighlight(null);
+    setIsModalOpen(true);
+    setIsTourActive(true);
+  }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleTourCallback = useCallback((data: any) => {
+    const { status, index } = data;
+    
+    if (status === "finished" || status === "skipped") {
+      setIsTourActive(false);
+      setIsModalOpen(false);
+      setLoadedPdfUrl(null);
+      setExtractionData(null);
+      setActiveHighlight(null);
+    } else if (index === 2) {
+      setActiveHighlight(dummyMedicalRecord.extracted_data.diagnoses[0].boundingBox as [number, number, number, number]);
+    } else {
+      setActiveHighlight(null);
+    }
+  }, []);
 
   // ── Core extraction function ───────────────────────────────────────
   const processDocument = useCallback(async (
@@ -514,11 +543,14 @@ export default function PatientDashboard() {
         </div>
       )}
 
+      <CitationTour run={isTourActive} onCallback={handleTourCallback} />
+
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((prev) => !prev)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onHelpClick={handleHelpClick}
       />
 
       {/* Main workspace — margin tracks sidebar width */}
