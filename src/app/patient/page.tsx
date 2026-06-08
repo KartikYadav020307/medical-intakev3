@@ -20,6 +20,8 @@ const CitationModal = dynamic(() => import("./components/CitationModal"), {
 });
 
 import ShareLinkModal from "./components/ShareLinkModal";
+import ProfileSettingsModal from "./components/ProfileSettingsModal";
+import GatekeeperSettingsModal from "./components/GatekeeperSettingsModal";
 
 const VerificationView = dynamic(() => import("./components/VerificationView"), {
   ssr: false,
@@ -58,6 +60,8 @@ export default function PatientDashboard() {
   const [recordToDelete, setRecordToDelete] = useState<MedicalRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isGatekeeperModalOpen, setIsGatekeeperModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
 
@@ -284,7 +288,8 @@ export default function PatientDashboard() {
     fileHash?: string,
     expectedSex?: string,
     expectedBloodType?: string,
-    expectedLanguage?: string
+    expectedLanguage?: string,
+    gatekeeperPrefs?: Record<string, unknown>
   ) => {
     setIsProcessing(true);
     setExtractionData(null);
@@ -319,6 +324,7 @@ export default function PatientDashboard() {
           expectedSex: finalSex,
           expectedBloodType: finalBloodType,
           expectedLanguage: finalLanguage,
+          gatekeeperPrefs: gatekeeperPrefs,
         }),
       });
 
@@ -371,9 +377,9 @@ export default function PatientDashboard() {
 
   // ── Upload complete handler — triggers extraction automatically ────
   const handleUploadComplete = useCallback(
-    (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string, expectedSex: string, expectedBloodType: string, expectedLanguage: string) => {
+    (downloadUrl: string, expectedPatientName: string, expectedDob: string, fileHash: string, expectedSex: string, expectedBloodType: string, expectedLanguage: string, gatekeeperPrefs?: Record<string, unknown>) => {
       setLoadedPdfUrl(downloadUrl);
-      processDocument(downloadUrl, expectedPatientName, expectedDob, fileHash, expectedSex, expectedBloodType, expectedLanguage);
+      processDocument(downloadUrl, expectedPatientName, expectedDob, fileHash, expectedSex, expectedBloodType, expectedLanguage, gatekeeperPrefs);
     },
     [processDocument],
   );
@@ -526,6 +532,8 @@ export default function PatientDashboard() {
           onSearchResultClick={handleSearchResultClick}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
+          onAvatarClick={() => setIsProfileModalOpen(true)}
+          onSettingsClick={() => setIsGatekeeperModalOpen(true)}
           onShareClick={() => setIsShareModalOpen(true)}
           onExportPdf={async () => {
             setIsExporting(true);
@@ -786,7 +794,6 @@ export default function PatientDashboard() {
                     </div>
                   </div>
 
-                  {/* Health Insights Section */}
                   <div>
                     <div className="flex items-center gap-2 mb-4 px-2">
                       <TrendingUp className="w-5 h-5 text-slate-600" />
@@ -881,6 +888,27 @@ export default function PatientDashboard() {
       <ShareLinkModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
+        onSuccess={(message) => setToast({ message, type: "success" })}
+        onError={(message) => setToast({ message, type: "error" })}
+      />
+
+      {/* Profile Settings Modal */}
+      <ProfileSettingsModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onSuccess={(message) => setToast({ message, type: "success" })}
+        onError={(message) => setToast({ message, type: "error" })}
+        onSettingsUpdate={(sex, bloodType, language) => {
+          setExpectedIdentity((prev) => 
+            prev ? { ...prev, sex, bloodType, language } : null
+          );
+        }}
+      />
+
+      {/* Gatekeeper Settings Modal */}
+      <GatekeeperSettingsModal
+        isOpen={isGatekeeperModalOpen}
+        onClose={() => setIsGatekeeperModalOpen(false)}
         onSuccess={(message) => setToast({ message, type: "success" })}
         onError={(message) => setToast({ message, type: "error" })}
       />

@@ -11,6 +11,7 @@ import { supabase } from "../../../../lib/supabase";
 import type { MedicalRecord, AppNotification } from "../page";
 
 interface TopBarProps {
+  onSettingsClick?: () => void;
   onShareClick?: () => void;
   onExportPdf?: () => Promise<void>;
   isExporting?: boolean;
@@ -18,9 +19,10 @@ interface TopBarProps {
   onSearchResultClick?: (record: MedicalRecord, boundingBox: [number, number, number, number]) => void;
   notifications?: AppNotification[];
   onNotificationClick?: (notification: AppNotification) => void;
+  onAvatarClick?: () => void;
 }
 
-export default function TopBar({ onShareClick, onExportPdf, isExporting, records, onSearchResultClick, notifications = [], onNotificationClick }: TopBarProps) {
+export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isExporting, records, onSearchResultClick, notifications = [], onNotificationClick, onAvatarClick }: TopBarProps) {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
   const [searchQuery, setSearchQuery] = useState("");
@@ -283,7 +285,10 @@ export default function TopBar({ onShareClick, onExportPdf, isExporting, records
             )}
           </AnimatePresence>
         </div>
-        <button className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150">
+        <button 
+          onClick={onSettingsClick}
+          className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150"
+        >
           <Settings className="w-5 h-5" />
         </button>
 
@@ -310,19 +315,25 @@ export default function TopBar({ onShareClick, onExportPdf, isExporting, records
         </button>
 
         {/* Profile Avatar */}
-        {photoURL ? (
-          <img
-            alt={displayName}
-            className="w-9 h-9 rounded-full border border-document-border object-cover ml-2 transition-all"
-            src={photoURL}
-          />
-        ) : (
-          <div
-            className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center ml-2 text-sm font-semibold transition-all"
-          >
-            {displayName.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <button 
+          onClick={onAvatarClick}
+          className="ml-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer hover:scale-105 active:scale-95"
+          aria-label="Profile Settings"
+        >
+          {photoURL ? (
+            <img
+              alt={displayName}
+              className="w-9 h-9 rounded-full border border-document-border object-cover"
+              src={photoURL}
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-sm font-semibold"
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </button>
       </div>
     </motion.header>
   );

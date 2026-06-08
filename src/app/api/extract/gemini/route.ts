@@ -568,11 +568,13 @@ export async function POST(
   let expectedSex: string | undefined;
   let expectedBloodType: string | undefined;
   let expectedLanguage: string | undefined;
+  let gatekeeperPrefs: Record<string, unknown> | undefined;
 
   try {
     const body = (await request.json()) as {
       pdfUrl?: unknown; expectedPatientName?: unknown; expectedDob?: unknown;
       expectedSex?: unknown; expectedBloodType?: unknown; expectedLanguage?: unknown;
+      gatekeeperPrefs?: Record<string, unknown>;
     };
     if (!body.pdfUrl || typeof body.pdfUrl !== "string") {
       return NextResponse.json(
@@ -586,6 +588,12 @@ export async function POST(
     expectedSex = typeof body.expectedSex === "string" ? body.expectedSex : undefined;
     expectedBloodType = typeof body.expectedBloodType === "string" ? body.expectedBloodType : undefined;
     expectedLanguage = typeof body.expectedLanguage === "string" ? body.expectedLanguage : undefined;
+    
+    // Default gatekeeper prefs if not provided
+    const defaultGatekeeperPrefs = { strictIdentityMatch: false, allergySensitivity: 'high' };
+    gatekeeperPrefs = typeof body.gatekeeperPrefs === "object" && body.gatekeeperPrefs !== null 
+      ? { ...defaultGatekeeperPrefs, ...body.gatekeeperPrefs } 
+      : defaultGatekeeperPrefs;
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid JSON in request body." },
@@ -673,7 +681,11 @@ export async function POST(
 
   // ── 3.5  Fast-fail pre-check: classify document ────────────────────
   try {
-    const triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}, Biological Sex: ${expectedSex || 'Unknown'}, Blood Type: ${expectedBloodType || 'Unknown'}, Primary Language: ${expectedLanguage || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
+    let triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}, Biological Sex: ${expectedSex || 'Unknown'}, Blood Type: ${expectedBloodType || 'Unknown'}, Primary Language: ${expectedLanguage || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
+
+    if (gatekeeperPrefs?.strictIdentityMatch) {
+      triageSystemInstruction += " STRICT IDENTITY MATCH IS ENABLED: If the name does not match perfectly or is missing, you MUST flag isWrongPatient as true.";
+    }
 
     const triageResponse = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -846,29 +858,35 @@ export async function POST(
 
     if (data.allergies.length > 0 && data.medications.length > 0) {
       try {
-        const conflictResponse = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `Here is a patient's extracted allergy list: ${JSON.stringify(
-                    data.allergies
-                  )}. Here is their prescribed medication list: ${JSON.stringify(
-                    data.medications
-                  )}. Are there any dangerous drug-allergy interactions here?`,
-                },
-              ],
+          let conflictSystemInstruction = "You are a clinical safety AI. Analyze the provided allergies and medications and detect if there are any dangerous drug-allergy interactions.";
+          if (gatekeeperPrefs?.allergySensitivity === 'low') {
+            conflictSystemInstruction += " ONLY flag critical, life-threatening conflicts. Ignore minor or theoretical interactions.";
+          } else {
+            conflictSystemInstruction += " Flag all potential interactions including minor and theoretical ones.";
+          }
+
+          const conflictResponse = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `Here is a patient's extracted allergy list: ${JSON.stringify(
+                      data.allergies
+                    )}. Here is their prescribed medication list: ${JSON.stringify(
+                      data.medications
+                    )}. Are there any dangerous drug-allergy interactions here?`,
+                  },
+                ],
+              },
+            ],
+            config: {
+              systemInstruction: conflictSystemInstruction,
+              responseMimeType: "application/json",
+              responseSchema: CONFLICT_SCHEMA,
             },
-          ],
-          config: {
-            systemInstruction:
-              "You are a clinical safety AI. Analyze the provided allergies and medications and detect if there are any dangerous drug-allergy interactions.",
-            responseMimeType: "application/json",
-            responseSchema: CONFLICT_SCHEMA,
-          },
-        });
+          });
 
         const conflictText = conflictResponse.text;
         if (conflictText) {

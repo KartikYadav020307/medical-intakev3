@@ -20,7 +20,8 @@ interface UploadHeroProps {
     fileHash: string,
     expectedSex: string,
     expectedBloodType: string,
-    expectedLanguage: string
+    expectedLanguage: string,
+    gatekeeperPrefs?: Record<string, unknown>
   ) => void;
 }
 
@@ -45,6 +46,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
       const userSex = user?.user_metadata?.sex || "Unknown";
       const userBloodType = user?.user_metadata?.blood_type || "Unknown";
       const userLanguage = user?.user_metadata?.language || "English";
+      const gatekeeperPrefs = user?.user_metadata?.gatekeeper_prefs || null;
 
       // Phase 2: Hash file and check for duplicates before expensive upload
       const fileHash = await generateFileHash(file);
@@ -79,7 +81,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         .getPublicUrl(fileName);
 
       setUploadedFileName(file.name);
-      onUploadComplete?.(urlData.publicUrl, userName, userDob, fileHash, userSex, userBloodType, userLanguage);
+      onUploadComplete?.(urlData.publicUrl, userName, userDob, fileHash, userSex, userBloodType, userLanguage, gatekeeperPrefs);
     } catch (err) {
       console.error("Upload failed:", err);
       const msg =
