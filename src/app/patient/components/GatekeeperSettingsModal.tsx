@@ -2,13 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ShieldAlert, X, Loader2, Save } from "lucide-react";
+import { ShieldAlert, X, Loader2, Save, AlertTriangle } from "lucide-react";
 import { supabase } from '@/utils/supabase/client';
-
-export interface GatekeeperPrefs {
-  strictIdentityMatch: boolean;
-  allergySensitivity: "high" | "low";
-}
 
 interface GatekeeperSettingsModalProps {
   isOpen: boolean;
@@ -31,14 +26,13 @@ export default function GatekeeperSettingsModal({
 
   useEffect(() => {
     if (isOpen) {
-      const loadProfile = async () => {
+      const loadSettings = async () => {
         setIsLoading(true);
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (user?.user_metadata?.gatekeeper_prefs) {
-            const prefs = user.user_metadata.gatekeeper_prefs as GatekeeperPrefs;
-            setStrictIdentityMatch(prefs.strictIdentityMatch ?? false);
-            setAllergySensitivity(prefs.allergySensitivity ?? "high");
+            setStrictIdentityMatch(user.user_metadata.gatekeeper_prefs.strictIdentityMatch ?? false);
+            setAllergySensitivity(user.user_metadata.gatekeeper_prefs.allergySensitivity ?? "high");
           }
         } catch (err) {
           console.error("Failed to load gatekeeper settings", err);
@@ -46,7 +40,7 @@ export default function GatekeeperSettingsModal({
           setIsLoading(false);
         }
       };
-      loadProfile();
+      loadSettings();
     }
   }, [isOpen]);
 
@@ -56,18 +50,20 @@ export default function GatekeeperSettingsModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const gatekeeper_prefs: GatekeeperPrefs = {
+      const currentPrefs = user.user_metadata?.gatekeeper_prefs || {};
+      const newPrefs = {
+        ...currentPrefs,
         strictIdentityMatch,
-        allergySensitivity,
+        allergySensitivity
       };
 
       const { error } = await supabase.auth.updateUser({
-        data: { gatekeeper_prefs }
+        data: { gatekeeper_prefs: newPrefs }
       });
 
       if (error) throw error;
       
-      onSuccess("Gatekeeper Controls updated successfully");
+      onSuccess("Gatekeeper settings updated successfully");
       onClose();
     } catch (err) {
       console.error("Failed to update gatekeeper settings", err);
@@ -81,7 +77,7 @@ export default function GatekeeperSettingsModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -90,7 +86,7 @@ export default function GatekeeperSettingsModal({
           className="relative w-full max-w-md mx-4 overflow-hidden rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]"
         >
           {/* Glass gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-red-50/30 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 via-transparent to-orange-50/30 pointer-events-none" />
 
           {/* Content */}
           <div className="relative p-8">
@@ -103,8 +99,8 @@ export default function GatekeeperSettingsModal({
             </button>
 
             {/* Header */}
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/25">
                 <ShieldAlert className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -112,74 +108,87 @@ export default function GatekeeperSettingsModal({
                   Gatekeeper Controls
                 </h2>
                 <p className="text-sm text-slate-500 mt-0.5">
-                  Dictate AI risk tolerance
+                  Set your AI risk tolerance
                 </p>
               </div>
             </div>
 
+            {/* Warning Alert */}
+            <div className="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-200/60 flex gap-3 shadow-sm">
+              <div className="shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                <span className="font-semibold block mb-0.5">AI Behavior:</span>
+                These settings adjust how strictly the AI filters incoming medical documents and flags potential conflicts.
+              </p>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
-                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
               </div>
             ) : (
-              <div className="space-y-8 mb-8">
+              <div className="space-y-6 mb-8">
+                
                 {/* Strict Identity Match Toggle */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <label className="text-sm font-semibold text-slate-800 block">
+                    <label className="text-sm font-bold text-slate-800 block mb-1">
                       Strict Identity Match
                     </label>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Block all uploads where the patient name doesn&apos;t match perfectly.
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Block all uploads where the name doesn&apos;t match perfectly.
                     </p>
                   </div>
                   <button
+                    type="button"
                     role="switch"
                     aria-checked={strictIdentityMatch}
                     onClick={() => setStrictIdentityMatch(!strictIdentityMatch)}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                      strictIdentityMatch ? 'bg-indigo-600' : 'bg-slate-200'
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 ${
+                      strictIdentityMatch ? 'bg-red-600' : 'bg-slate-200'
                     }`}
                   >
-                    <span className="sr-only">Toggle Strict Identity Match</span>
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                         strictIdentityMatch ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      } shadow-sm`}
                     />
                   </button>
                 </div>
 
-                <div className="h-px bg-slate-200/60 w-full" />
+                <div className="h-px bg-slate-100" />
 
                 {/* Allergy Sensitivity Toggle */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <label className="text-sm font-semibold text-slate-800 block">
+                    <label className="text-sm font-bold text-slate-800 block mb-1">
                       Allergy Sensitivity
                     </label>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-500 leading-relaxed">
                       {allergySensitivity === 'high' 
                         ? "Flag all potential interactions (High Noise)" 
                         : "Flag only critical conflicts (Low Noise)"}
                     </p>
                   </div>
                   <button
+                    type="button"
                     role="switch"
                     aria-checked={allergySensitivity === 'high'}
                     onClick={() => setAllergySensitivity(allergySensitivity === 'high' ? 'low' : 'high')}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                      allergySensitivity === 'high' ? 'bg-indigo-600' : 'bg-slate-200'
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 ${
+                      allergySensitivity === 'high' ? 'bg-red-600' : 'bg-slate-200'
                     }`}
                   >
-                    <span className="sr-only">Toggle Allergy Sensitivity</span>
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                         allergySensitivity === 'high' ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      } shadow-sm`}
                     />
                   </button>
                 </div>
+
               </div>
             )}
 
@@ -195,7 +204,7 @@ export default function GatekeeperSettingsModal({
               <button
                 onClick={handleSave}
                 disabled={isSaving || isLoading}
-                className="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                className="flex-[2] py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
               >
                 {isSaving ? (
                   <>
@@ -205,7 +214,7 @@ export default function GatekeeperSettingsModal({
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Changes
+                    Save Controls
                   </>
                 )}
               </button>
