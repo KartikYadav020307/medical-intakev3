@@ -145,13 +145,12 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
           if (file) handleFileUpload(file);
         }}
         onClick={() => !isUploading && fileInputRef.current?.click()}
-        className={`w-full text-left relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${
-          uploadError
+        className={`w-full text-left relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${uploadError
             ? "border-red-300 bg-red-50/50"
             : isDragOver
               ? "border-blue-500 bg-blue-50 scale-[1.02] shadow-lg"
               : "border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/30 shadow-sm hover:shadow-md"
-        }`}
+          }`}
       >
         {/* Ambient glow */}
         <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />

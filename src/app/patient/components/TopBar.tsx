@@ -4,11 +4,22 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Search, Bell, Settings, FileDown, Share2, Loader2, 
   Stethoscope, Pill, FlaskConical, AlertTriangle, 
-  Syringe, Activity, User, Hash, Scan, type LucideIcon
+  Syringe, Activity, User, Hash, Scan, type LucideIcon,
+  LogOut, UserCircle
 } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "../../../../lib/supabase";
 import type { MedicalRecord, AppNotification } from "../page";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface TopBarProps {
   onSettingsClick?: () => void;
@@ -20,16 +31,16 @@ interface TopBarProps {
   notifications?: AppNotification[];
   onNotificationClick?: (notification: AppNotification) => void;
   onAvatarClick?: () => void;
+  onSignOut?: () => void;
 }
 
-export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isExporting, records, onSearchResultClick, notifications = [], onNotificationClick, onAvatarClick }: TopBarProps) {
+export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isExporting, records, onSearchResultClick, notifications = [], onNotificationClick, onAvatarClick, onSignOut }: TopBarProps) {
   const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -49,6 +60,7 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
       setDisplayName(
         typeof name === "string" && name.trim() ? name : user.email ?? "User"
       );
+      setUserEmail(user.email ?? "");
     };
 
     loadUser();
@@ -58,14 +70,11 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
     };
   }, []);
 
-  // Handle click outside to close dropdown
+  // Handle click outside to close search dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
-      }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -128,22 +137,24 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
     return results.slice(0, 8); // Limit to 8 results for clean UI
   }, [searchQuery, records]);
 
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   return (
     <motion.header
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className="bg-surface border-b border-document-border w-full h-16 flex justify-between items-center px-8 sticky top-0 z-50"
+      className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 w-full h-16 flex justify-between items-center px-8 sticky top-0 z-50 shadow-[0_1px_10px_-3px_rgba(0,0,0,0.04)]"
     >
       {/* Left: Brand / Search */}
       <div className="flex items-center gap-6">
         <span className="text-headline-xl text-primary tracking-tight select-none">
           ClinicalAudit
         </span>
-        <div className="relative hidden md:block w-72" ref={searchRef}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-          <input
-            className="w-full pl-10 pr-4 py-1.5 bg-surface-container-low border border-transparent rounded-full text-body-sm focus:border-primary/30 focus:ring-1 focus:ring-primary/30 text-on-surface outline-none placeholder:text-on-surface-variant/60 transition-all"
+        <div className="relative hidden md:block w-80" ref={searchRef}>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none z-10" />
+          <Input
+            className="w-full pl-10 pr-4 h-9 bg-slate-50/80 border-slate-200/60 rounded-full text-sm focus-visible:border-blue-300 focus-visible:ring-blue-200/40 text-slate-800 placeholder:text-slate-400 transition-all hover:bg-slate-100/60"
             placeholder="Search clinical facts, meds, labs..."
             type="text"
             value={searchQuery}
@@ -212,92 +223,88 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
       </div>
 
       {/* Right: Actions & Profile */}
-      <div className="flex items-center gap-3">
-        <div className="relative" ref={notificationsRef}>
-          <button 
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150 relative"
-          >
-            <Bell className="w-5 h-5" />
-            {notifications.some(n => !n.read) && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {isNotificationsOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute top-full right-0 mt-2 w-80 bg-white border border-slate-200/60 rounded-2xl shadow-xl overflow-hidden z-50 flex flex-col"
-              >
-                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <h3 className="font-semibold text-slate-800">Notifications</h3>
-                  <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
-                    {notifications.filter(n => !n.read).length} new
-                  </span>
-                </div>
-                
-                {notifications.length > 0 ? (
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        onClick={() => {
-                          if (onNotificationClick) {
-                            onNotificationClick(notification);
-                          }
-                          setIsNotificationsOpen(false);
-                        }}
-                        className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors flex gap-3 ${!notification.read ? 'bg-slate-50/50' : ''}`}
-                      >
-                        <div className="shrink-0 mt-0.5">
-                          {notification.type === 'warning' ? (
-                            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
-                          ) : notification.type === 'error' ? (
-                            <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><Bell className="w-4 h-4" /></div>
-                          )}
-                        </div>
-                        <div>
-                          <p className={`text-sm font-semibold ${!notification.read ? 'text-slate-900' : 'text-slate-600'}`}>{notification.title}</p>
-                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notification.message}</p>
-                        </div>
-                        {!notification.read && (
-                          <div className="ml-auto shrink-0 mt-1">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                          </div>
-                        )}
+      <div className="flex items-center gap-2">
+        {/* Notifications Bell — shadcn DropdownMenu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer active:scale-95 relative focus:outline-none"
+              aria-label="Notifications"
+            >
+              <Bell className="w-[18px] h-[18px]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-80 p-0 rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
+              <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                {unreadCount} new
+              </span>
+            </div>
+            
+            {notifications.length > 0 ? (
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                {notifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    onClick={() => {
+                      if (onNotificationClick) {
+                        onNotificationClick(notification);
+                      }
+                    }}
+                    className={`p-4 cursor-pointer flex gap-3 rounded-none focus:bg-slate-50 ${!notification.read ? 'bg-blue-50/30' : ''}`}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {notification.type === 'warning' ? (
+                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
+                      ) : notification.type === 'error' ? (
+                        <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><AlertTriangle className="w-4 h-4" /></div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><Bell className="w-4 h-4" /></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold leading-tight ${!notification.read ? 'text-slate-900' : 'text-slate-600'}`}>{notification.title}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{notification.message}</p>
+                    </div>
+                    {!notification.read && (
+                      <div className="ml-auto shrink-0 mt-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-slate-500">
-                    <Bell className="w-8 h-8 mx-auto text-slate-300 mb-3" />
-                    <p className="text-sm font-medium">No notifications</p>
-                    <p className="text-xs mt-1">You&apos;re all caught up!</p>
-                  </div>
-                )}
-              </motion.div>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-500">
+                <Bell className="w-8 h-8 mx-auto text-slate-300 mb-3" />
+                <p className="text-sm font-medium">No notifications</p>
+                <p className="text-xs mt-1">You&apos;re all caught up!</p>
+              </div>
             )}
-          </AnimatePresence>
-        </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Settings */}
         <button 
           onClick={onSettingsClick}
-          className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95 duration-150"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer active:scale-95"
+          aria-label="Gatekeeper Settings"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-[18px] h-[18px]" />
         </button>
 
-        <div className="h-6 w-px bg-document-border mx-2" />
+        <div className="h-6 w-px bg-slate-200/80 mx-1" />
 
+        {/* Export & Share buttons */}
         <button
           onClick={onExportPdf}
           disabled={isExporting}
-          className="px-4 py-2 border border-document-border rounded-lg text-primary hover:bg-surface-container-low transition-colors text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="px-3.5 py-2 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 transition-all text-[13px] font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -308,32 +315,52 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
         </button>
         <button
           onClick={onShareClick}
-          className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all text-body-sm font-semibold cursor-pointer active:scale-95 duration-150 flex items-center gap-2"
+          className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-600/20 hover:-translate-y-0.5 transition-all text-[13px] font-semibold cursor-pointer active:scale-95 duration-200 flex items-center gap-2"
         >
           <Share2 className="w-4 h-4" />
           Share Summary
         </button>
 
-        {/* Profile Avatar */}
-        <button 
-          onClick={onAvatarClick}
-          className="ml-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all cursor-pointer hover:scale-105 active:scale-95"
-          aria-label="Profile Settings"
-        >
-          {photoURL ? (
-            <img
-              alt={displayName}
-              className="w-9 h-9 rounded-full border border-document-border object-cover"
-              src={photoURL}
-            />
-          ) : (
-            <div
-              className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-sm font-semibold"
+        {/* Profile Avatar — shadcn Avatar + DropdownMenu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="ml-1 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              aria-label="Profile menu"
             >
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </button>
+              <Avatar size="default" className="border-2 border-transparent hover:border-blue-200 transition-colors">
+                <AvatarImage src={photoURL ?? undefined} alt={displayName} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-xl">
+            <DropdownMenuLabel className="py-3 px-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-800 truncate">{displayName}</span>
+                {userEmail && (
+                  <span className="text-xs text-slate-500 truncate mt-0.5">{userEmail}</span>
+                )}
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onAvatarClick?.()} className="gap-2 py-2 px-3 cursor-pointer">
+              <UserCircle className="w-4 h-4 text-slate-500" />
+              <span className="text-sm">Profile Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => onSignOut?.()}
+              className="gap-2 py-2 px-3 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm">Sign Out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </motion.header>
   );

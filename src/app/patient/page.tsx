@@ -144,7 +144,7 @@ export default function PatientDashboard() {
   // ── Derived Master Timeline ─────────────────────────────────────────
   const masterTimeline = React.useMemo(() => {
     if (!patientHistory || patientHistory.length === 0) return [];
-    
+
     const events: MasterTimelineEvent[] = [];
     const uniqueEvents = new Map<string, MasterTimelineEvent>();
     const getEventKey = (event: MasterTimelineEvent) =>
@@ -192,7 +192,7 @@ export default function PatientDashboard() {
         uniqueEvents.set(key, event);
       }
     });
-    
+
     return Array.from(uniqueEvents.values()).sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
   }, [patientHistory]);
 
@@ -224,7 +224,7 @@ export default function PatientDashboard() {
     const totalDiagnoses = uniqueDiagnoses.size;
     const totalMedications = uniqueMedications.size;
     const totalLabs = uniqueLabs.size;
-    
+
     const recentActivity = Array.from(uniqueRecentActivity.values()).slice(0, 5);
 
     return { totalDiagnoses, totalMedications, totalLabs, recentActivity };
@@ -295,7 +295,7 @@ export default function PatientDashboard() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTourCallback = useCallback((data: any) => {
     const { status, index } = data;
-    
+
     if (status === "finished" || status === "skipped") {
       setIsTourActive(false);
       setIsModalOpen(false);
@@ -346,9 +346,9 @@ export default function PatientDashboard() {
       const response = await fetch("/api/extract/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          pdfUrl, 
-          expectedPatientName: finalPatientName, 
+        body: JSON.stringify({
+          pdfUrl,
+          expectedPatientName: finalPatientName,
           expectedDob: finalDob,
           expectedSex: finalSex,
           expectedBloodType: finalBloodType,
@@ -450,6 +450,14 @@ export default function PatientDashboard() {
     }
   }, [recordToDelete]);
 
+  // ── Sign-Out Handler (shared by Sidebar + TopBar avatar dropdown) ───
+  const handleSignOut = useCallback(() => {
+    router.push("/");
+    supabase.auth.signOut().then(() => {
+      router.refresh();
+    });
+  }, [router]);
+
   // ── Global Search Result Handler ────────────────────────────────────
   const handleSearchResultClick = useCallback((record: MedicalRecord, boundingBox: [number, number, number, number]) => {
     if (record.pdf_url) {
@@ -473,7 +481,7 @@ export default function PatientDashboard() {
     } catch (err) {
       console.error("Failed to save read notification state:", err);
     }
-    
+
     // 2. Deep Link
     if (notification.relatedRecordId) {
       const record = patientHistory.find((r) => r.id === notification.relatedRecordId);
@@ -508,8 +516,8 @@ export default function PatientDashboard() {
             event.type === "diagnosis"
               ? "bg-blue-100 text-blue-700"
               : event.type === "medication"
-              ? "bg-amber-100 text-amber-700"
-              : "bg-emerald-100 text-emerald-700",
+                ? "bg-amber-100 text-amber-700"
+                : "bg-emerald-100 text-emerald-700",
           fact: event.title,
           source: "Master Timeline",
           citation: event.detail || "General Record",
@@ -533,11 +541,10 @@ export default function PatientDashboard() {
         <div
           role={toast.type === "error" ? "alert" : "status"}
           aria-live={toast.type === "error" ? "assertive" : "polite"}
-          className={`fixed right-6 top-6 z-[9999] max-w-sm rounded-2xl border px-5 py-4 text-sm font-medium shadow-lg ${
-            toast.type === "success"
+          className={`fixed right-6 top-6 z-[9999] max-w-sm rounded-2xl border px-5 py-4 text-sm font-medium shadow-lg ${toast.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : "border-red-200 bg-red-50 text-red-800"
-          }`}
+            }`}
         >
           {toast.message}
         </div>
@@ -555,9 +562,8 @@ export default function PatientDashboard() {
 
       {/* Main workspace — margin tracks sidebar width */}
       <main
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? "ml-16" : "ml-56"
-        }`}
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${sidebarCollapsed ? "ml-[68px]" : "ml-60"
+          }`}
       >
         <TopBar
           records={patientHistory}
@@ -581,6 +587,7 @@ export default function PatientDashboard() {
             }
           }}
           isExporting={isExporting}
+          onSignOut={handleSignOut}
         />
 
         {/* Single-column dashboard canvas */}
@@ -590,98 +597,98 @@ export default function PatientDashboard() {
               {/* Compact upload zone */}
               <UploadHero onUploadComplete={handleUploadComplete} />
 
-          {/* Active Processing Tracker */}
-          {(isProcessing || (loadedPdfUrl && !extractionData && !extractionError)) && (
-             <ProcessingTracker tasks={[{
-                filename: loadedPdfUrl ? loadedPdfUrl.split('/').pop() || "Document" : "Document",
-                status: isProcessing ? "Extracting Facts" : "Queued",
-                statusColor: isProcessing ? "text-blue-600" : "text-slate-500",
-                progress: isProcessing ? 50 : 0,
-                detail: isProcessing ? "Verifying against clinical taxonomy..." : "Ready to process...",
-                active: isProcessing
-             }]} />
-          )}
-
-          {/* Extraction error banner */}
-          {extractionError && (
-            <div className="p-5 bg-red-50 border border-red-100 rounded-2xl shadow-sm flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner">
-                <span className="text-red-600 text-xl font-bold">!</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-red-800 tracking-tight">
-                  Extraction Failed
-                </p>
-                <p className="text-sm text-red-600/90 truncate mt-0.5">
-                  {extractionError}
-                </p>
-              </div>
-              {loadedPdfUrl && (
-                <button
-                  onClick={() => processDocument(loadedPdfUrl)}
-                  disabled={isProcessing}
-                  className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] hover:shadow-[0_4px_15px_-3px_rgba(220,38,38,0.5)] hover:-translate-y-0.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
-                >
-                  Retry
-                </button>
+              {/* Active Processing Tracker */}
+              {(isProcessing || (loadedPdfUrl && !extractionData && !extractionError)) && (
+                <ProcessingTracker tasks={[{
+                  filename: loadedPdfUrl ? loadedPdfUrl.split('/').pop() || "Document" : "Document",
+                  status: isProcessing ? "Extracting Facts" : "Queued",
+                  statusColor: isProcessing ? "text-blue-600" : "text-slate-500",
+                  progress: isProcessing ? 50 : 0,
+                  detail: isProcessing ? "Verifying against clinical taxonomy..." : "Ready to process...",
+                  active: isProcessing
+                }]} />
               )}
-            </div>
-          )}
 
-          {/* High-Level Summary */}
-          {(extractionData || isProcessing) && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Diagnoses Summary */}
-              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
-                  {isProcessing ? <Loader2 className="w-7 h-7 text-blue-600 animate-spin" /> : <Stethoscope className="w-7 h-7 text-blue-600" />}
+              {/* Extraction error banner */}
+              {extractionError && (
+                <div className="p-5 bg-red-50 border border-red-100 rounded-2xl shadow-sm flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner">
+                    <span className="text-red-600 text-xl font-bold">!</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-semibold text-red-800 tracking-tight">
+                      Extraction Failed
+                    </p>
+                    <p className="text-sm text-red-600/90 truncate mt-0.5">
+                      {extractionError}
+                    </p>
+                  </div>
+                  {loadedPdfUrl && (
+                    <button
+                      onClick={() => processDocument(loadedPdfUrl)}
+                      disabled={isProcessing}
+                      className="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] hover:shadow-[0_4px_15px_-3px_rgba(220,38,38,0.5)] hover:-translate-y-0.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
+                    >
+                      Retry
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
-                    {isProcessing ? "-" : extractionData?.diagnoses.length || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
-                </div>
-              </div>
+              )}
 
-              {/* Medications Summary */}
-              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
-                  {isProcessing ? <Loader2 className="w-7 h-7 text-amber-600 animate-spin" /> : <Pill className="w-7 h-7 text-amber-600" />}
-                </div>
-                <div>
-                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
-                    {isProcessing ? "-" : extractionData?.medications.length || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
-                </div>
-              </div>
+              {/* High-Level Summary */}
+              {(extractionData || isProcessing) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Diagnoses Summary */}
+                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+                      {isProcessing ? <Loader2 className="w-7 h-7 text-blue-600 animate-spin" /> : <Stethoscope className="w-7 h-7 text-blue-600" />}
+                    </div>
+                    <div>
+                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        {isProcessing ? "-" : extractionData?.diagnoses.length || 0}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
+                    </div>
+                  </div>
 
-              {/* Lab Results Summary */}
-              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
-                  {isProcessing ? <Loader2 className="w-7 h-7 text-emerald-600 animate-spin" /> : <FlaskConical className="w-7 h-7 text-emerald-600" />}
-                </div>
-                <div>
-                  <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
-                    {isProcessing ? "-" : extractionData?.labResults.length || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
-                </div>
-              </div>
-            </div>
-          )}
+                  {/* Medications Summary */}
+                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                      {isProcessing ? <Loader2 className="w-7 h-7 text-amber-600 animate-spin" /> : <Pill className="w-7 h-7 text-amber-600" />}
+                    </div>
+                    <div>
+                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        {isProcessing ? "-" : extractionData?.medications.length || 0}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
+                    </div>
+                  </div>
 
-          {/* Medical Timeline */}
-          {extractionData && !isProcessing && (
-            <MedicalTimeline
-              data={extractionData}
-              onItemClick={(box) => {
-                setActiveHighlight(box);
-                setIsModalOpen(true);
-              }}
-            />
-          )}
+                  {/* Lab Results Summary */}
+                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+                      {isProcessing ? <Loader2 className="w-7 h-7 text-emerald-600 animate-spin" /> : <FlaskConical className="w-7 h-7 text-emerald-600" />}
+                    </div>
+                    <div>
+                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        {isProcessing ? "-" : extractionData?.labResults.length || 0}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Medical Timeline */}
+              {extractionData && !isProcessing && (
+                <MedicalTimeline
+                  data={extractionData}
+                  onItemClick={(box) => {
+                    setActiveHighlight(box);
+                    setIsModalOpen(true);
+                  }}
+                />
+              )}
 
               <hr className="my-8 border-slate-200" />
 
@@ -693,7 +700,7 @@ export default function PatientDashboard() {
 
                 {renderMasterTimeline()}
               </div>
-          </>)}
+            </>)}
 
           {activeTab === "records" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -701,7 +708,7 @@ export default function PatientDashboard() {
                 <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upload History</h2>
                 <p className="text-slate-500 text-sm mt-1">Review your previously processed medical documents.</p>
               </div>
-              
+
               {patientHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
                   <FileText className="w-12 h-12 text-slate-300 mb-4" />
@@ -715,7 +722,7 @@ export default function PatientDashboard() {
                     const dCount = data?.diagnoses?.length || 0;
                     const mCount = data?.medications?.length || 0;
                     const lCount = data?.labResults?.length || 0;
-                    
+
                     return (
                       <div key={record.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1 group">
                         <div className="flex items-start justify-between mb-4">
@@ -734,12 +741,12 @@ export default function PatientDashboard() {
                         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
                           {record.pdf_url && (
                             <a href={record.pdf_url} target="_blank" rel="noopener noreferrer"
-                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
                               <Download className="w-3.5 h-3.5" /> Download
                             </a>
                           )}
                           <button onClick={(e) => { e.stopPropagation(); setRecordToDelete(record); }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors ml-auto cursor-pointer">
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors ml-auto cursor-pointer">
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
@@ -831,7 +838,7 @@ export default function PatientDashboard() {
                       <TrendingUp className="w-5 h-5 text-slate-600" />
                       <h3 className="text-lg font-bold text-slate-800">Recent Activity & Trends</h3>
                     </div>
-                    
+
                     <div className="bg-white rounded-3xl border border-slate-200/60 overflow-hidden shadow-sm">
                       {analyticsData.recentActivity.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 text-sm">No recent diagnoses or medications found.</div>
@@ -840,9 +847,8 @@ export default function PatientDashboard() {
                           {analyticsData.recentActivity.map((activity, idx) => (
                             <div key={idx} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
                               <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner border ${
-                                  activity.type === 'diagnosis' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
-                                }`}>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner border ${activity.type === 'diagnosis' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                                  }`}>
                                   {activity.type === 'diagnosis' ? <Stethoscope className="w-5 h-5" /> : <Pill className="w-5 h-5" />}
                                 </div>
                                 <div>
@@ -904,11 +910,11 @@ export default function PatientDashboard() {
             </p>
             <div className="flex items-center gap-3 mt-7">
               <button onClick={() => setRecordToDelete(null)} disabled={isDeleting}
-                      className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-50">
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer disabled:opacity-50">
                 Cancel
               </button>
               <button onClick={handleDeleteRecord} disabled={isDeleting}
-                      className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-[0_2px_10px_-3px_rgba(220,38,38,0.4)] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
                 {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : "Confirm Delete"}
               </button>
             </div>
@@ -931,7 +937,7 @@ export default function PatientDashboard() {
         onSuccess={(message) => setToast({ message, type: "success" })}
         onError={(message) => setToast({ message, type: "error" })}
         onSettingsUpdate={(sex, bloodType, language) => {
-          setExpectedIdentity((prev) => 
+          setExpectedIdentity((prev) =>
             prev ? { ...prev, sex, bloodType, language } : null
           );
         }}

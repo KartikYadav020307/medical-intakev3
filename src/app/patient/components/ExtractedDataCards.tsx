@@ -231,11 +231,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(d.boundingBox) ? null : d.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(d.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(d.boundingBox)
                   ? "border-blue-500 bg-blue-50/50 shadow-[0_0_0_1px_rgba(59,130,246,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="text-sm font-medium text-slate-800 leading-snug">
@@ -276,11 +275,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(m.boundingBox) ? null : m.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(m.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(m.boundingBox)
                   ? "border-amber-500 bg-amber-50/50 shadow-[0_0_0_1px_rgba(245,158,11,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-amber-300 hover:bg-amber-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -328,11 +326,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(l.boundingBox) ? null : l.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(l.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(l.boundingBox)
                   ? "border-emerald-500 bg-emerald-50/50 shadow-[0_0_0_1px_rgba(16,185,129,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-slate-800 leading-snug">
@@ -383,11 +380,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(a.boundingBox) ? null : a.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(a.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(a.boundingBox)
                   ? "border-red-500 bg-red-50/50 shadow-[0_0_0_1px_rgba(239,68,68,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-red-300 hover:bg-red-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -442,11 +438,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(p.boundingBox) ? null : p.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(p.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(p.boundingBox)
                   ? "border-indigo-500 bg-indigo-50/50 shadow-[0_0_0_1px_rgba(99,102,241,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -501,11 +496,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(v.boundingBox) ? null : v.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(v.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(v.boundingBox)
                   ? "border-sky-500 bg-sky-50/50 shadow-[0_0_0_1px_rgba(14,165,233,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-sky-300 hover:bg-sky-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-slate-800 leading-snug">
@@ -556,11 +550,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(ph.boundingBox) ? null : ph.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(ph.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(ph.boundingBox)
                   ? "border-violet-500 bg-violet-50/50 shadow-[0_0_0_1px_rgba(139,92,246,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-violet-300 hover:bg-violet-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -608,11 +601,10 @@ export default function ExtractedDataCards({
               onClick={() =>
                 onHighlight(isActiveBox(icd.boundingBox) ? null : icd.boundingBox)
               }
-              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                isActiveBox(icd.boundingBox)
+              className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(icd.boundingBox)
                   ? "border-pink-500 bg-pink-50/50 shadow-[0_0_0_1px_rgba(236,72,153,1)] scale-[1.02]"
                   : "border-slate-200 hover:border-pink-300 hover:bg-pink-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -731,11 +723,10 @@ export default function ExtractedDataCards({
                 onClick={() =>
                   onHighlight(isActiveBox(img.boundingBox) ? null : img.boundingBox)
                 }
-                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${
-                  isActiveBox(img.boundingBox)
+                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(img.boundingBox)
                     ? "border-cyan-500 bg-cyan-50/50 shadow-[0_0_0_1px_rgba(6,182,212,1)] scale-[1.02]"
                     : "border-slate-200 hover:border-cyan-300 hover:bg-cyan-50/30 hover:-translate-y-0.5 hover:shadow-sm"
-                }`}
+                  }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

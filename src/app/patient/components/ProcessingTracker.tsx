@@ -38,11 +38,10 @@ export default function ProcessingTracker({ tasks }: ProcessingTrackerProps) {
             initial={{ x: 10, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.4 + i * 0.1 }}
-            className={`p-4 rounded-lg border border-document-border ${
-              task.active
+            className={`p-4 rounded-lg border border-document-border ${task.active
                 ? "bg-surface-container-low"
                 : "bg-surface opacity-60"
-            }`}
+              }`}
           >
             <div className="flex justify-between items-start mb-2">
               <span className="text-body-sm font-semibold text-on-surface truncate pr-2">
