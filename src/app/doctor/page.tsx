@@ -55,9 +55,9 @@ const formatDate = (value: string, includeTime = false) => {
     year: "numeric",
     ...(includeTime
       ? {
-          hour: "numeric",
-          minute: "2-digit",
-        }
+        hour: "numeric",
+        minute: "2-digit",
+      }
       : {}),
   }).format(date);
 };
@@ -164,7 +164,7 @@ export default function DoctorDashboard() {
       setIsLoading(false);
       return;
     }
-
+    //hlo//
     setRecords((data ?? []) as MedicalRecord[]);
     setLastSync(new Date().toISOString());
     setIsLoading(false);
@@ -178,11 +178,11 @@ export default function DoctorDashboard() {
   const handleSignOut = () => {
     // 1. Instantly route the user to the landing page for a snappy UX
     router.push("/");
-    
+
     // 2. Handle the database sign-out in the background
     supabase.auth.signOut().then(() => {
       // 3. Purge the cache only after the sign-out is confirmed
-      router.refresh(); 
+      router.refresh();
     });
   };
 
