@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Search, Bell, Settings, FileDown, Share2, Loader2, 
@@ -148,9 +149,12 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
     >
       {/* Left: Brand / Search */}
       <div className="flex items-center gap-6">
-        <span className="font-bold tracking-[0.2em] text-slate-900 dark:text-white select-none">
-          LOCUS
-        </span>
+        <div className="flex items-center gap-2">
+          <Image src="/locus-logo.png" alt="LOCUS Logo" width={28} height={28} className="object-contain" priority />
+          <span className="font-bold tracking-[0.2em] text-slate-900 dark:text-white select-none">
+            LOCUS
+          </span>
+        </div>
         <div className="relative hidden md:block w-80" ref={searchRef}>
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none z-10" />
           <Input

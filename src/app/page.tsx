@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from 'motion/react';
-import { Dna, Network, AlignCenter } from 'lucide-react';
+import { Network, AlignCenter } from 'lucide-react';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
@@ -123,8 +124,8 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="flex items-center gap-3 mb-10">
-              <Dna className="w-8 h-8 text-indigo-600" />
+            <div className="flex items-center gap-4 mb-10">
+              <Image src="/locus-logo.png" alt="LOCUS Logo" width={64} height={64} className="object-contain" priority />
               <span className="text-2xl font-bold tracking-widest text-slate-900">LOCUS</span>
             </div>
             
