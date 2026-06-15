@@ -125,7 +125,7 @@ export default function Home() {
           >
             <div className="flex items-center gap-3 mb-10">
               <Dna className="w-8 h-8 text-indigo-600" />
-              <span className="text-2xl font-bold tracking-tight text-slate-900">Medical<span className="text-indigo-600">.Intake</span></span>
+              <span className="text-2xl font-bold tracking-widest text-slate-900">LOCUS</span>
             </div>
             
             <h1 className="text-4xl lg:text-5xl font-bold leading-tight tracking-tight text-slate-900 mb-6">
@@ -136,7 +136,7 @@ export default function Home() {
             </h1>
             
             <p className="text-lg text-slate-600 font-sans mb-12 max-w-md">
-              Securely access health records, AI diagnostics tools, and collaborative clinical environments.
+              Precision Medical Intake & Coordinate-Mapped Extraction
             </p>
 
             <div className="grid grid-cols-2 gap-6 max-w-md">

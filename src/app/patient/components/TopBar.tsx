@@ -148,8 +148,8 @@ export default function TopBar({ onSettingsClick, onShareClick, onExportPdf, isE
     >
       {/* Left: Brand / Search */}
       <div className="flex items-center gap-6">
-        <span className="text-headline-xl text-primary tracking-tight select-none">
-          ClinicalAudit
+        <span className="font-bold tracking-[0.2em] text-slate-900 dark:text-white select-none">
+          LOCUS
         </span>
         <div className="relative hidden md:block w-80" ref={searchRef}>
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none z-10" />

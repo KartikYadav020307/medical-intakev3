@@ -26,8 +26,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Medical Intake — ClinicalAudit",
-  description: "Securely access health records, AI diagnostics tools, and collaborative clinical environments.",
+  title: "LOCUS | Clinical Intelligence",
+  description: "Precision Medical Intake & Coordinate-Mapped Extraction",
 };
 
 export default function RootLayout({

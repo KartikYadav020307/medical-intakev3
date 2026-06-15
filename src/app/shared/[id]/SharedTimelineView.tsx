@@ -209,8 +209,8 @@ export default function SharedTimelineView({
       <header className="bg-white border-b border-slate-200/60 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-headline-xl text-primary tracking-tight select-none">
-              ClinicalAudit
+            <span className="font-bold tracking-[0.2em] text-slate-900 dark:text-white select-none">
+              LOCUS
             </span>
             <div className="h-6 w-px bg-slate-200" />
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-bold text-blue-700 uppercase tracking-wider">
@@ -395,7 +395,7 @@ export default function SharedTimelineView({
           <div className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-emerald-500" />
             <span>
-              Secured by ClinicalAudit · Expires{" "}
+              Secured by LOCUS · Expires{" "}
               {isMounted ? new Date(expiresAt).toLocaleString() : "Loading..."}
             </span>
           </div>
