@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Shield,
   Clock,
@@ -76,6 +76,11 @@ export default function SharedTimelineView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecordIndex, setSelectedRecordIndex] = useState(0);
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // ── Derive Master Timeline (same logic as patient/page.tsx) ──────────
   const masterTimeline = useMemo(() => {
     if (!records || records.length === 0) return [];
@@ -97,6 +102,7 @@ export default function SharedTimelineView({
         : new Date(record.created_at);
 
       const date = dateSource.toLocaleDateString("en-US", {
+        timeZone: "UTC",
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -221,7 +227,7 @@ export default function SharedTimelineView({
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200">
               <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span className="text-xs font-semibold text-amber-700">
-                {formatTimeRemaining(expiresAt)}
+                {isMounted ? formatTimeRemaining(expiresAt) : "Calculating..."}
               </span>
             </div>
           </div>
@@ -307,6 +313,7 @@ export default function SharedTimelineView({
                     <FileText className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" />
                     Record{" "}
                     {new Date(record.created_at).toLocaleDateString("en-US", {
+                      timeZone: "UTC",
                       month: "short",
                       day: "numeric",
                     })}
@@ -388,7 +395,7 @@ export default function SharedTimelineView({
             <Shield className="w-3.5 h-3.5 text-emerald-500" />
             <span>
               Secured by ClinicalAudit · Expires{" "}
-              {new Date(expiresAt).toLocaleString()}
+              {isMounted ? new Date(expiresAt).toLocaleString() : "Loading..."}
             </span>
           </div>
           <span>Read-only shared view · No modifications permitted</span>

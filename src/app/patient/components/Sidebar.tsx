@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   HelpCircle,
   LogOut,
-  PanelLeft,
+  Menu,
   FileUp,
 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
@@ -58,21 +58,8 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
       className={`bg-white/80 backdrop-blur-xl h-screen fixed left-0 top-0 border-r border-slate-200/60 flex flex-col z-40 transition-[width] duration-300 ease-in-out overflow-x-hidden shadow-[1px_0_15px_-3px_rgba(0,0,0,0.04)] ${collapsed ? "w-[68px]" : "w-60"
         }`}
     >
-      {/* Brand + Toggle */}
-      <div className={`flex items-center h-16 shrink-0 border-b border-slate-100 ${collapsed ? "justify-center px-0" : "px-4 gap-3"}`}>
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-2.5 min-w-0 flex-1"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
-              <span className="text-white text-sm font-bold">CA</span>
-            </div>
-            <span className="text-sm font-bold text-slate-800 tracking-tight truncate">ClinicalAudit</span>
-          </motion.div>
-        )}
+      {/* Toggle */}
+      <div className={`flex items-center h-16 shrink-0 border-b border-slate-100 ${collapsed ? "justify-center px-0" : "px-4"}`}>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -80,7 +67,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
               className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer active:scale-95 shrink-0"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              <PanelLeft className={`w-[18px] h-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`} />
+              <Menu className="w-[18px] h-[18px]" />
             </button>
           </TooltipTrigger>
           {collapsed && (
@@ -90,13 +77,6 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
           )}
         </Tooltip>
       </div>
-
-      {/* Navigation Section Label */}
-      {!collapsed && (
-        <div className="px-4 pt-5 pb-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Navigation</span>
-        </div>
-      )}
 
       {/* Navigation Links */}
       <div className={`flex-1 flex flex-col gap-1 overflow-y-auto overflow-x-hidden ${collapsed ? "px-2 pt-4" : "px-3 pt-1"}`}>
