@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { ExtractionData } from "./ExtractedDataCards";
 import MedicalTimeline from "./MedicalTimeline";
 import dynamic from "next/dynamic";
@@ -30,39 +30,34 @@ export default function CitationModal({
   if (!isOpen || !pdfUrl || !extractionData) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          transition={{ type: "spring", stiffness: 400, damping: 35 }}
-          className="w-[96vw] h-[96vh] bg-white rounded-3xl overflow-hidden flex flex-row relative shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-200/50"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[96vw] h-[96vh] p-0 bg-white rounded-3xl overflow-hidden flex flex-row shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border-slate-200/50 z-50 [&>button[aria-label='Close']]:hidden gap-0">
+        <DialogTitle className="sr-only">Medical History Citation</DialogTitle>
+        <DialogDescription className="sr-only">View the PDF citation and highlights</DialogDescription>
+        
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-slate-200 transition-all z-[60] cursor-pointer"
         >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-slate-200 transition-all z-[60] cursor-pointer"
-          >
-            <X className="w-6 h-6 text-slate-700" />
-          </button>
+          <X className="w-6 h-6 text-slate-700" />
+        </button>
 
-          {/* Left Column - Details/Timeline */}
-          <div className="w-[30%] h-full overflow-y-auto border-r border-slate-200/60 bg-slate-50/50 p-8">
-            <h2 className="text-2xl font-semibold text-slate-800 tracking-tight mb-8">Medical History</h2>
-            <MedicalTimeline data={extractionData} onItemClick={onItemClick} />
-          </div>
+        {/* Left Column - Details/Timeline */}
+        <div className="w-[30%] h-full overflow-y-auto border-r border-slate-200/60 bg-slate-50/50 p-8 shrink-0">
+          <h2 className="text-2xl font-semibold text-slate-800 tracking-tight mb-8">Medical History</h2>
+          <MedicalTimeline data={extractionData} onItemClick={onItemClick} />
+        </div>
 
-          {/* Right Column - PDF Viewer */}
-          <div className="w-[70%] h-full bg-slate-100/50 flex flex-col relative overflow-hidden">
-            <PdfViewer
-              pdfUrl={pdfUrl}
-              activeHighlight={activeHighlight}
-              onClearHighlight={() => onItemClick(null)}
-            />
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        {/* Right Column - PDF Viewer */}
+        <div className="w-[70%] h-full bg-slate-100/50 flex flex-col relative overflow-hidden shrink-0">
+          <PdfViewer
+            pdfUrl={pdfUrl}
+            activeHighlight={activeHighlight}
+            onClearHighlight={() => onItemClick(null)}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

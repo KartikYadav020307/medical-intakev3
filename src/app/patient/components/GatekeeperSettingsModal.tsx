@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { ShieldAlert, X, Loader2, Save, AlertTriangle } from "lucide-react";
 import { supabase } from '@/utils/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface GatekeeperSettingsModalProps {
   isOpen: boolean;
@@ -73,155 +75,125 @@ export default function GatekeeperSettingsModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", stiffness: 400, damping: 35 }}
-          className="relative w-full max-w-md mx-4 overflow-hidden rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]"
-        >
-          {/* Glass gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 via-transparent to-orange-50/30 pointer-events-none" />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-white/20 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] z-50 rounded-3xl [&>button[aria-label='Close']]:hidden">
+        {/* Glass gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 via-transparent to-orange-50/30 pointer-events-none" />
 
-          {/* Content */}
-          <div className="relative p-8">
-            {/* Close button */}
+        {/* Content */}
+        <div className="relative p-8">
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Header */}
+          <DialogHeader className="flex flex-row items-center gap-4 mb-6 space-y-0 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/25 shrink-0">
+              <ShieldAlert className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight">
+                Gatekeeper Controls
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-500 mt-0.5">
+                Set your AI risk tolerance
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          {/* Warning Alert */}
+          <div className="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-200/60 flex gap-3 shadow-sm">
+            <div className="shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-semibold block mb-0.5">AI Behavior:</span>
+              These settings adjust how strictly the AI filters incoming medical documents and flags potential conflicts.
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-6 mb-8">
+              
+              {/* Strict Identity Match Toggle */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm font-bold text-slate-800 block mb-1">
+                    Strict Identity Match
+                  </Label>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Block all uploads where the name doesn&apos;t match perfectly.
+                  </p>
+                </div>
+                <Switch
+                  checked={strictIdentityMatch}
+                  onCheckedChange={setStrictIdentityMatch}
+                  className="data-[state=checked]:bg-red-600"
+                />
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              {/* Allergy Sensitivity Toggle */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <Label className="text-sm font-bold text-slate-800 block mb-1">
+                    Allergy Sensitivity
+                  </Label>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {allergySensitivity === 'high' 
+                      ? "Flag all potential interactions (High Noise)" 
+                      : "Flag only critical conflicts (Low Noise)"}
+                  </p>
+                </div>
+                <Switch
+                  checked={allergySensitivity === 'high'}
+                  onCheckedChange={(checked) => setAllergySensitivity(checked ? 'high' : 'low')}
+                  className="data-[state=checked]:bg-red-600"
+                />
+              </div>
+
+            </div>
+          )}
+
+          {/* Footer Actions */}
+          <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              disabled={isSaving}
+              className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-200 transition-colors cursor-pointer border border-slate-200 disabled:opacity-60"
             >
-              <X className="w-4 h-4" />
+              Cancel
             </button>
-
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/25">
-                <ShieldAlert className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                  Gatekeeper Controls
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  Set your AI risk tolerance
-                </p>
-              </div>
-            </div>
-
-            {/* Warning Alert */}
-            <div className="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-200/60 flex gap-3 shadow-sm">
-              <div className="shrink-0 mt-0.5">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                <span className="font-semibold block mb-0.5">AI Behavior:</span>
-                These settings adjust how strictly the AI filters incoming medical documents and flags potential conflicts.
-              </p>
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-6 mb-8">
-                
-                {/* Strict Identity Match Toggle */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <label className="text-sm font-bold text-slate-800 block mb-1">
-                      Strict Identity Match
-                    </label>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Block all uploads where the name doesn&apos;t match perfectly.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={strictIdentityMatch}
-                    onClick={() => setStrictIdentityMatch(!strictIdentityMatch)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 ${
-                      strictIdentityMatch ? 'bg-red-600' : 'bg-slate-200'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        strictIdentityMatch ? 'translate-x-6' : 'translate-x-1'
-                      } shadow-sm`}
-                    />
-                  </button>
-                </div>
-
-                <div className="h-px bg-slate-100" />
-
-                {/* Allergy Sensitivity Toggle */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <label className="text-sm font-bold text-slate-800 block mb-1">
-                      Allergy Sensitivity
-                    </label>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      {allergySensitivity === 'high' 
-                        ? "Flag all potential interactions (High Noise)" 
-                        : "Flag only critical conflicts (Low Noise)"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={allergySensitivity === 'high'}
-                    onClick={() => setAllergySensitivity(allergySensitivity === 'high' ? 'low' : 'high')}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 ${
-                      allergySensitivity === 'high' ? 'bg-red-600' : 'bg-slate-200'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        allergySensitivity === 'high' ? 'translate-x-6' : 'translate-x-1'
-                      } shadow-sm`}
-                    />
-                  </button>
-                </div>
-
-              </div>
-            )}
-
-            {/* Footer Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                disabled={isSaving}
-                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-200 transition-colors cursor-pointer border border-slate-200 disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving || isLoading}
-                className="flex-[2] py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Save Controls
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || isLoading}
+              className="flex-[2] py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Controls
+                </>
+              )}
+            </button>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
