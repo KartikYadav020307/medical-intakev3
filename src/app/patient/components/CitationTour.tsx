@@ -47,6 +47,7 @@ export default function CitationTour({ run, onCallback }: CitationTourProps) {
             zIndex: 10000,
             primaryColor: "#2563eb",
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any
       }
     />
