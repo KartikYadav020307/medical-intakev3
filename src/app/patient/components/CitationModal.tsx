@@ -31,7 +31,7 @@ export default function CitationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[96vw] h-[96vh] p-0 bg-white rounded-3xl overflow-hidden flex flex-row shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border-slate-200/50 z-50 [&>button[aria-label='Close']]:hidden gap-0">
+      <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-[96vw] h-[96vh] p-0 bg-white rounded-3xl overflow-hidden flex flex-row shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border-slate-200/50 z-50 [&>button[aria-label='Close']]:hidden gap-0">
         <DialogTitle className="sr-only">Medical History Citation</DialogTitle>
         <DialogDescription className="sr-only">View the PDF citation and highlights</DialogDescription>
         

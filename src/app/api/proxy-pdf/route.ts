@@ -16,7 +16,11 @@ export async function GET(req: NextRequest) {
     } catch {
       // ignore
     }
-    const finalUrl = encodeURI(decodedUrl);
+    let urlToFetch = decodedUrl;
+    if (urlToFetch.startsWith('/')) {
+      urlToFetch = `${req.nextUrl.origin}${urlToFetch}`;
+    }
+    const finalUrl = encodeURI(urlToFetch);
 
     const response = await fetch(finalUrl);
     
