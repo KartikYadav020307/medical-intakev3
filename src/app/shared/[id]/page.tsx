@@ -67,7 +67,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
           </div>
           <p className="text-xs text-slate-400 mt-6">
             <Shield className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" />
-            Protected by ClinicalAudit secure sharing
+            Protected by LOCUS secure sharing
           </p>
         </div>
       </div>
