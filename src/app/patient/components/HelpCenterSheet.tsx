@@ -32,7 +32,7 @@ export default function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetP
           <SheetTitle className="text-2xl font-bold tracking-tight text-slate-900">LOCUS Help Center</SheetTitle>
           <div className="mt-4 text-sm text-slate-600 space-y-3 leading-relaxed">
             <p className="font-semibold text-slate-800">The AI extracts structured facts.</p>
-            <p>But it doesn't just guess. It mathematically maps the fact to the source.</p>
+            <p>But it doesn&apos;t just guess. It mathematically maps the fact to the source.</p>
             <p>Clicking a fact below highlights the exact pixels it was extracted from in the document, ensuring 100% verifiability.</p>
           </div>
         </SheetHeader>
