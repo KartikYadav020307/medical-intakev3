@@ -475,6 +475,13 @@ export default function PatientDashboard() {
     setIsModalOpen(true);
   }, []);
 
+  const handleCitationModalClose = useCallback(() => {
+    setLoadedPdfUrl(null);
+    setExtractionData(null);
+    setActiveHighlight(null);
+    setIsModalOpen(false);
+  }, []);
+
   // ── Notification Click Handler ──────────────────────────────────────
   const handleNotificationClick = useCallback((notification: AppNotification) => {
     // 1. Persist Read State
@@ -893,7 +900,7 @@ export default function PatientDashboard() {
       {/* Citation Modal */}
       <CitationModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCitationModalClose}
         pdfUrl={loadedPdfUrl}
         activeHighlight={activeHighlight}
         extractionData={extractionData}
