@@ -35,14 +35,6 @@ export default function CitationModal({
         <DialogTitle className="sr-only">Medical History Citation</DialogTitle>
         <DialogDescription className="sr-only">View the PDF citation and highlights</DialogDescription>
         
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-slate-200 transition-all z-[60] cursor-pointer"
-        >
-          <X className="w-6 h-6 text-slate-700" />
-        </button>
-
         {/* Left Column - Details/Timeline */}
         <div className="w-[30%] h-full overflow-y-auto border-r border-slate-200/60 bg-slate-50/50 p-8 shrink-0">
           <h2 className="text-2xl font-semibold text-slate-800 tracking-tight mb-8">Medical History</h2>
@@ -55,6 +47,14 @@ export default function CitationModal({
             pdfUrl={pdfUrl}
             activeHighlight={activeHighlight}
             onClearHighlight={() => onItemClick(null)}
+            headerActions={
+              <button
+                onClick={onClose}
+                className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-slate-200 transition-all z-[60] cursor-pointer"
+              >
+                <X className="w-6 h-6 text-slate-700" />
+              </button>
+            }
           />
         </div>
       </DialogContent>
