@@ -93,6 +93,30 @@ export default function SharedTimelineView({
 
     records.forEach((record) => {
       const data = record.extracted_data;
+      const isIsoDate = (value: unknown): value is string =>
+        typeof value === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+        !Number.isNaN(Date.parse(`${value}T00:00:00.000Z`));
+      const getTimelineDate = (itemDate?: string) => {
+        const clinicalDate = isIsoDate(itemDate)
+          ? itemDate
+          : isIsoDate(data?.encounter_date)
+            ? data.encounter_date
+            : undefined;
+        const dateSource = clinicalDate
+          ? new Date(`${clinicalDate}T00:00:00.000Z`)
+          : new Date(record.created_at);
+
+        return {
+          date: dateSource.toLocaleDateString("en-US", {
+            timeZone: "UTC",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          rawDate: clinicalDate ? dateSource.toISOString() : record.created_at,
+        };
+      };
 
       // Prioritize AI-extracted encounter date, fallback to upload date
       const encounterDate = data?.encounter_date;
@@ -116,6 +140,7 @@ export default function SharedTimelineView({
 
       if (data?.diagnoses) {
         data.diagnoses.forEach((d) => {
+          const { date, rawDate } = getTimelineDate(d.date);
           events.push({
             type: "diagnosis",
             title: d.name,
@@ -127,6 +152,7 @@ export default function SharedTimelineView({
       }
       if (data?.medications) {
         data.medications.forEach((m) => {
+          const { date, rawDate } = getTimelineDate(m.date);
           events.push({
             type: "medication",
             title: m.name,
@@ -138,6 +164,7 @@ export default function SharedTimelineView({
       }
       if (data?.labResults) {
         data.labResults.forEach((l) => {
+          const { date, rawDate } = getTimelineDate(l.date);
           events.push({
             type: "lab",
             title: l.testName,

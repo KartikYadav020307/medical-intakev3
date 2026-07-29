@@ -9,6 +9,7 @@ import { Stethoscope, Pill, FlaskConical, AlertTriangle, Activity, User, Hash, S
 
 interface DiagnosisItem {
   name: string;
+  date?: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
   verified_by?: string;
@@ -16,6 +17,7 @@ interface DiagnosisItem {
 
 interface MedicationItem {
   name: string;
+  date?: string;
   dosage: string;
   frequency: string;
   confidence: "High" | "Medium" | "Low";
@@ -25,6 +27,7 @@ interface MedicationItem {
 
 interface LabResultItem {
   testName: string;
+  date?: string;
   value: string;
   unit: string;
   isAbnormal?: boolean;

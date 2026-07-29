@@ -9,12 +9,14 @@ export const runtime = "nodejs";
 
 interface DiagnosisItem {
   name: string;
+  date: string;
   confidence: "High" | "Medium" | "Low";
   boundingBox: [number, number, number, number];
 }
 
 interface MedicationItem {
   name: string;
+  date: string;
   dosage: string;
   frequency: string;
   confidence: "High" | "Medium" | "Low";
@@ -23,6 +25,7 @@ interface MedicationItem {
 
 interface LabResultItem {
   testName: string;
+  date: string;
   value: string;
   unit: string;
   isAbnormal: boolean;
@@ -140,6 +143,11 @@ const EXTRACTION_SCHEMA = {
             type: "string",
             description: "The exact diagnosis text as written in the document.",
           },
+          date: {
+            type: "string",
+            description:
+              "The most accurate clinical date associated with this diagnosis, formatted as a strict ISO 8601 YYYY-MM-DD string.",
+          },
           confidence: {
             type: "string",
             enum: ["High", "Medium", "Low"],
@@ -153,7 +161,7 @@ const EXTRACTION_SCHEMA = {
             items: { type: "integer" },
           },
         },
-        required: ["name", "confidence", "boundingBox"],
+        required: ["name", "date", "confidence", "boundingBox"],
       },
     },
     medications: {
@@ -165,6 +173,11 @@ const EXTRACTION_SCHEMA = {
           name: {
             type: "string",
             description: "The medication name as written in the document.",
+          },
+          date: {
+            type: "string",
+            description:
+              "The most accurate clinical date associated with this medication, formatted as a strict ISO 8601 YYYY-MM-DD string.",
           },
           dosage: {
             type: "string",
@@ -189,7 +202,7 @@ const EXTRACTION_SCHEMA = {
             items: { type: "integer" },
           },
         },
-        required: ["name", "dosage", "frequency", "confidence", "boundingBox"],
+        required: ["name", "date", "dosage", "frequency", "confidence", "boundingBox"],
       },
     },
     labResults: {
@@ -201,6 +214,11 @@ const EXTRACTION_SCHEMA = {
           testName: {
             type: "string",
             description: "The name of the lab test as written in the document.",
+          },
+          date: {
+            type: "string",
+            description:
+              "The most accurate clinical date associated with this lab result, formatted as a strict ISO 8601 YYYY-MM-DD string.",
           },
           value: {
             type: "string",
@@ -229,7 +247,7 @@ const EXTRACTION_SCHEMA = {
             items: { type: "integer" },
           },
         },
-        required: ["testName", "value", "unit", "isAbnormal", "confidence", "boundingBox"],
+        required: ["testName", "date", "value", "unit", "isAbnormal", "confidence", "boundingBox"],
       },
     },
     allergies: {
@@ -549,6 +567,11 @@ EXTRACTION RULES:
 - For dosage and frequency: use an empty string "" if the information is not specified in the document.
 - For lab result units: use an empty string "" if not specified.
 - ENCOUNTER DATE: Actively search for the date of the medical encounter, visit, or when the document was created/authored. Look for headers like "Date of Visit", "Date of Service", "Report Date", "Encounter Date", "Date of Exam", or any document-level date. Return in YYYY-MM-DD format. If no date can be determined, return "Unknown".
+
+CRITICAL TEMPORAL DIRECTIVE: For every Diagnosis, Medication, and Lab result you extract, you MUST determine the most accurate clinical date associated with it.
+- Look for specific dates next to the item (e.g., a lab draw date).
+- If a specific item date is missing, infer the date from the document's primary metadata (e.g., 'Date Discharged', 'Encounter Date', or 'Date Admitted').
+- ALWAYS format the extracted date as a strict ISO 8601 YYYY-MM-DD string (e.g., '2026-05-18').
 
 OUTPUT:
 Return ONLY the structured JSON object. No explanations, no markdown, no commentary.`;
