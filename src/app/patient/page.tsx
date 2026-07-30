@@ -606,8 +606,15 @@ export default function PatientDashboard() {
         <div className={`p-8 flex flex-col gap-5 mx-auto w-full ${activeTab === "verification" ? "" : "max-w-5xl"}`}>
           {activeTab === "upload" && (
             <>
-              {/* Compact upload zone */}
-              <UploadHero onUploadComplete={handleUploadComplete} />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Patient dashboard</h2>
+                  <p className="text-slate-500 text-sm mt-1">
+                    Review your extracted records, timelines, and clinical signals.
+                  </p>
+                </div>
+                <UploadHero onUploadComplete={handleUploadComplete} />
+              </div>
 
               {/* Active Processing Tracker */}
               {(isProcessing || (loadedPdfUrl && !extractionData && !extractionError)) && (

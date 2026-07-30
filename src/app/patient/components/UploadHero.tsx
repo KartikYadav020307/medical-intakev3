@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CloudUpload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
+import { Button } from "@/components/ui/button";
 
 async function generateFileHash(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
@@ -26,7 +27,6 @@ interface UploadHeroProps {
 }
 
 export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
-  const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -93,30 +93,35 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
     }
   };
 
-  // Determine icon + status text
   const StatusIcon = isUploading
     ? Loader2
     : uploadError
       ? AlertCircle
       : uploadedFileName
         ? CheckCircle2
-        : CloudUpload;
+        : null;
 
-  const iconClass = isUploading
-    ? "text-blue-600 animate-spin"
+  const statusText = isUploading
+    ? "Sending file to secure storage."
     : uploadError
-      ? "text-red-500"
+      ? uploadError
       : uploadedFileName
-        ? "text-emerald-600"
-        : "text-blue-600";
+        ? `${uploadedFileName} uploaded. Analyzing document.`
+        : null;
+
+  const statusClass = uploadError
+    ? "text-red-600"
+    : uploadedFileName
+      ? "text-emerald-600"
+      : "text-slate-500";
 
   return (
     <motion.div
       initial={{ y: 12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, delay: 0.15 }}
+      className="flex flex-col items-start gap-2 sm:items-end"
     >
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -129,94 +134,32 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         }}
       />
 
-      {/* Compact horizontal drop zone */}
-      <button
+      <Button
         type="button"
+        size="lg"
         aria-label="Upload medical record"
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragOver(true);
-        }}
-        onDragLeave={() => setIsDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragOver(false);
-          const file = e.dataTransfer.files[0];
-          if (file) handleFileUpload(file);
-        }}
         onClick={() => !isUploading && fileInputRef.current?.click()}
-        className={`w-full text-left relative h-32 rounded-2xl border-2 border-dashed flex items-center gap-6 px-8 cursor-pointer transition-all duration-300 overflow-hidden ${uploadError
-            ? "border-red-300 bg-red-50/50"
-            : isDragOver
-              ? "border-blue-500 bg-blue-50 scale-[1.02] shadow-lg"
-              : "border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/30 shadow-sm hover:shadow-md"
-          }`}
+        disabled={isUploading}
+        className="h-10 rounded-xl px-4 shadow-[0_8px_24px_-12px_rgba(37,99,235,0.6)] hover:shadow-[0_12px_30px_-14px_rgba(37,99,235,0.75)] active:scale-[0.98]"
       >
-        {/* Ambient glow */}
-        <div className="absolute right-0 top-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-        {/* Icon */}
-        <motion.div
-          animate={isDragOver ? { y: -3, scale: 1.15 } : { y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 300 }}
-          className="shrink-0 relative z-10"
-        >
-          <StatusIcon className={`w-9 h-9 ${iconClass}`} strokeWidth={1.5} />
-        </motion.div>
-
-        {/* Text */}
-        <div className="flex flex-col min-w-0 relative z-10">
-          {isUploading ? (
-            <>
-              <span className="text-base font-semibold text-slate-800 tracking-tight">
-                Uploading...
-              </span>
-              <span className="text-sm font-medium text-slate-500">
-                Sending file to secure storage.
-              </span>
-            </>
-          ) : uploadError ? (
-            <>
-              <span className="text-base font-semibold text-red-600 tracking-tight">
-                Upload Failed
-              </span>
-              <span className="text-sm font-medium text-red-500 truncate">
-                {uploadError}
-              </span>
-              <span className="text-sm font-medium text-slate-500 mt-0.5">
-                Click to try again.
-              </span>
-            </>
-          ) : uploadedFileName ? (
-            <>
-              <span className="text-base font-semibold text-slate-800 tracking-tight truncate">
-                {uploadedFileName}
-              </span>
-              <span className="text-sm font-medium text-emerald-600">
-                Uploaded — analyzing document.
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="text-base font-semibold text-slate-800 tracking-tight">
-                Upload New Record
-              </span>
-              <span className="text-sm font-medium text-slate-500">
-                Drag & drop a PDF here, or click to browse.
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Right-side button hint */}
-        {!isUploading && !uploadedFileName && !uploadError && (
-          <div className="ml-auto shrink-0 relative z-10">
-            <span className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all pointer-events-none">
-              Browse Files
-            </span>
-          </div>
+        {isUploading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Plus className="w-4 h-4" />
         )}
-      </button>
+        {isUploading ? "Uploading..." : "Upload Record"}
+      </Button>
+
+      {statusText && (
+        <div className={`flex max-w-xs items-center gap-1.5 text-right text-xs font-medium ${statusClass}`}>
+          {StatusIcon && (
+            <StatusIcon
+              className={`w-3.5 h-3.5 shrink-0 ${isUploading ? "animate-spin" : ""}`}
+            />
+          )}
+          <span className="truncate">{statusText}</span>
+        </div>
+      )}
     </motion.div>
   );
 }
