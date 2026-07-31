@@ -52,6 +52,46 @@ type MasterTimelineEvent = {
   rawDate: string;
 };
 
+type ValidationReasonCode =
+  | "NON_MEDICAL"
+  | "WRONG_PATIENT"
+  | "POOR_LEGIBILITY"
+  | "UNSUPPORTED_LANGUAGE"
+  | "DUPLICATE_DOCUMENT";
+
+type ExtractionApiResponse =
+  | { success: true; data: ExtractionData }
+  | {
+    success: false;
+    error?: string;
+    errorType?: "VALIDATION_FAILED";
+    reasonCode?: ValidationReasonCode;
+    message?: string;
+  };
+
+const VALIDATION_ERROR_MESSAGES: Record<ValidationReasonCode, string> = {
+  NON_MEDICAL: "This document does not appear to be a valid medical record.",
+  WRONG_PATIENT: "This document appears to belong to another patient.",
+  POOR_LEGIBILITY: "The scan quality is too low. Please upload a clearer PDF.",
+  UNSUPPORTED_LANGUAGE: "Only English medical documents are supported at this time.",
+  DUPLICATE_DOCUMENT: "This exact document has already been uploaded to your timeline.",
+};
+
+function getExtractionErrorMessage(
+  result: ExtractionApiResponse | null,
+  fallback: string,
+) {
+  if (result && !result.success && result.reasonCode) {
+    return VALIDATION_ERROR_MESSAGES[result.reasonCode] ?? result.message ?? result.error ?? fallback;
+  }
+
+  if (result && !result.success) {
+    return result.message ?? result.error ?? fallback;
+  }
+
+  return fallback;
+}
+
 export default function PatientDashboard() {
   const router = useRouter();
   const [isOnboarded, setIsOnboarded] = useState(false);
@@ -362,14 +402,15 @@ export default function PatientDashboard() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Extraction failed: ${response.statusText}`);
-      }
+      const result = (await response.json().catch(() => null)) as ExtractionApiResponse | null;
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || "Extraction failed.");
+      if (!response.ok || !result?.success) {
+        throw new Error(
+          getExtractionErrorMessage(
+            result,
+            response.ok ? "Extraction failed." : `Extraction failed: ${response.statusText}`,
+          ),
+        );
       }
 
       setExtractionData(result.data);

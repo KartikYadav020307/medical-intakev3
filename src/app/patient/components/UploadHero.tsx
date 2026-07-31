@@ -61,7 +61,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
 
         if (existing && existing.length > 0) {
           throw new Error(
-            "Duplicate Detected: You have already uploaded this exact document."
+            "This exact document has already been uploaded to your timeline."
           );
         }
       }

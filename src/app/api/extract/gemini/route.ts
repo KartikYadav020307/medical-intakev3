@@ -110,6 +110,13 @@ interface SafetyAlerts {
   description: string;
 }
 
+type L2ReasonCode =
+  | "NON_MEDICAL"
+  | "WRONG_PATIENT"
+  | "POOR_LEGIBILITY"
+  | "UNSUPPORTED_LANGUAGE"
+  | "DUPLICATE_DOCUMENT";
+
 interface SuccessResponse {
   success: true;
   data: GeminiExtractionResult;
@@ -119,6 +126,28 @@ interface SuccessResponse {
 interface ErrorResponse {
   success: false;
   error: string;
+  errorType?: "VALIDATION_FAILED";
+  reasonCode?: L2ReasonCode;
+  message?: string;
+  details?: Record<string, unknown>;
+}
+
+function validationFailedResponse(
+  reasonCode: L2ReasonCode,
+  message: string,
+  details?: Record<string, unknown>,
+): NextResponse<ErrorResponse> {
+  return NextResponse.json(
+    {
+      success: false,
+      errorType: "VALIDATION_FAILED",
+      reasonCode,
+      message,
+      error: message,
+      ...(details ? { details } : {}),
+    },
+    { status: 400 },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -510,8 +539,21 @@ const PRECHECK_SCHEMA = {
       type: "string",
       description: "The name of the patient the document belongs to, if isWrongPatient is true.",
     },
+    isLegible: {
+      type: "boolean",
+      description:
+        "true if the document text is readable enough for reliable clinical extraction; false if blurry, corrupted, too low-resolution, or otherwise unreadable.",
+    },
+    detectedLanguage: {
+      type: "string",
+      description: "The primary language of the document, such as English, Spanish, French, or Unknown.",
+    },
+    isSupportedLanguage: {
+      type: "boolean",
+      description: "true only if the document's primary language is English; false for non-English documents.",
+    },
   },
-  required: ["isMedical", "reason"],
+  required: ["isMedical", "reason", "isWrongPatient", "isLegible", "detectedLanguage", "isSupportedLanguage"],
 } as const;
 
 const CONFLICT_SCHEMA = {
@@ -704,7 +746,14 @@ export async function POST(
 
   // ── 3.5  Fast-fail pre-check: classify document ────────────────────
   try {
-    let triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}, Biological Sex: ${expectedSex || 'Unknown'}, Blood Type: ${expectedBloodType || 'Unknown'}, Primary Language: ${expectedLanguage || 'Unknown'}. Analyze the document. If it is a non-medical document, flag isMedical as false. If the document explicitly belongs to a different patient, flag isWrongPatient as true and extract their detectedPatientName.`;
+    let triageSystemInstruction = `You are a triage AI. The securely logged-in patient is ${expectedPatientName || 'Unknown'}, born ${expectedDob || 'Unknown'}, Biological Sex: ${expectedSex || 'Unknown'}, Blood Type: ${expectedBloodType || 'Unknown'}, Primary Language: ${expectedLanguage || 'Unknown'}.
+
+Analyze the document before extraction and return the structured precheck JSON only.
+- Set isLegible to false if the scan is blurry, corrupted, too low-resolution, mostly blank, or otherwise not readable enough for reliable clinical extraction.
+- Set detectedLanguage to the document's primary language. Set isSupportedLanguage to true only when the primary document language is English.
+- Set isMedical to false if it is not a medical record, lab report, prescription, clinical note, imaging report, discharge summary, or similar health document.
+- Set isWrongPatient to true if the document explicitly belongs to a different patient than expected, and extract detectedPatientName when visible.
+- Use reason to explain the most important rejection or acceptance signal in one sentence.`;
 
     if (gatekeeperPrefs?.strictIdentityMatch) {
       triageSystemInstruction += " STRICT IDENTITY MATCH IS ENABLED: If the name does not match perfectly or is missing, you MUST flag isWrongPatient as true.";
@@ -739,27 +788,53 @@ export async function POST(
       const triage = JSON.parse(triageText) as {
         isMedical: boolean;
         reason: string;
-        isWrongPatient?: boolean;
+        isWrongPatient: boolean;
         detectedPatientName?: string;
+        isLegible: boolean;
+        detectedLanguage: string;
+        isSupportedLanguage: boolean;
       };
 
-      if (!triage.isMedical) {
-        return NextResponse.json(
+      if (!triage.isLegible) {
+        return validationFailedResponse(
+          "POOR_LEGIBILITY",
+          "Document quality is too poor for reliable extraction.",
           {
-            success: false,
-            error: `Document Rejected: ${triage.reason}`,
+            reason: triage.reason,
           },
-          { status: 400 },
+        );
+      }
+
+      if (!triage.isSupportedLanguage) {
+        return validationFailedResponse(
+          "UNSUPPORTED_LANGUAGE",
+          "Only English medical documents are currently supported.",
+          {
+            detectedLanguage: triage.detectedLanguage,
+            reason: triage.reason,
+          },
+        );
+      }
+
+      if (!triage.isMedical) {
+        return validationFailedResponse(
+          "NON_MEDICAL",
+          "This does not appear to be a medical document.",
+          {
+            reason: triage.reason,
+          },
         );
       }
 
       if (triage.isWrongPatient) {
-        return NextResponse.json(
+        return validationFailedResponse(
+          "WRONG_PATIENT",
+          "Document name does not match the logged-in user.",
           {
-            success: false,
-            error: `Security Alert: This document appears to belong to ${triage.detectedPatientName}, not ${expectedPatientName || "the current user"}. Upload rejected.`,
+            detectedPatientName: triage.detectedPatientName,
+            expectedPatientName: expectedPatientName || "the current user",
+            reason: triage.reason,
           },
-          { status: 400 },
         );
       }
     }
