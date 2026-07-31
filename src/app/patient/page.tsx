@@ -512,7 +512,7 @@ export default function PatientDashboard() {
   }, [patientHistory, handleSearchResultClick, readNotificationIds]);
 
 
-  const renderMasterTimeline = () => (
+  const renderMasterTimeline = (showHeader = true) => (
     masterTimeline.length === 0 ? (
       <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
         <FileText className="w-12 h-12 text-slate-300 mb-4" />
@@ -534,6 +534,7 @@ export default function PatientDashboard() {
           source: "Master Timeline",
           citation: event.detail || "General Record",
         }))}
+        showHeader={showHeader}
       />
     )
   );
@@ -606,15 +607,13 @@ export default function PatientDashboard() {
         <div className={`p-8 flex flex-col gap-5 mx-auto w-full ${activeTab === "verification" ? "" : "max-w-5xl"}`}>
           {activeTab === "upload" && (
             <>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Patient dashboard</h2>
-                  <p className="text-slate-500 text-sm mt-1">
-                    Review your extracted records, timelines, and clinical signals.
-                  </p>
-                </div>
-                <UploadHero onUploadComplete={handleUploadComplete} />
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Patient Dashboard</h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  Review your extracted records, timelines, and clinical signals.
+                </p>
               </div>
+              <UploadHero onUploadComplete={handleUploadComplete} />
 
               {/* Active Processing Tracker */}
               {(isProcessing || (loadedPdfUrl && !extractionData && !extractionError)) && (
@@ -702,6 +701,7 @@ export default function PatientDashboard() {
               {extractionData && !isProcessing && (
                 <MedicalTimeline
                   data={extractionData}
+                  showHeader={false}
                   onItemClick={(box) => {
                     setActiveHighlight(box);
                     setIsModalOpen(true);
@@ -709,16 +709,7 @@ export default function PatientDashboard() {
                 />
               )}
 
-              <hr className="my-8 border-slate-200" />
-
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Recent Medical History</h2>
-                  <p className="text-slate-500 text-sm mt-1">A unified chronological view of all extracted medical events.</p>
-                </div>
-
-                {renderMasterTimeline()}
-              </div>
+              {renderMasterTimeline(false)}
             </>)}
 
           {activeTab === "records" && (

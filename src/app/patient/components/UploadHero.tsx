@@ -120,7 +120,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
       initial={{ y: 12, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="flex flex-col items-start gap-2 sm:items-end"
+      className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3"
     >
       <input
         ref={fileInputRef}
@@ -136,22 +136,21 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
 
       <Button
         type="button"
-        size="lg"
+        size="icon-lg"
         aria-label="Upload medical record"
         onClick={() => !isUploading && fileInputRef.current?.click()}
         disabled={isUploading}
-        className="h-10 rounded-xl px-4 shadow-[0_8px_24px_-12px_rgba(37,99,235,0.6)] hover:shadow-[0_12px_30px_-14px_rgba(37,99,235,0.75)] active:scale-[0.98]"
+        className="h-14 w-14 rounded-full bg-primary text-white shadow-2xl shadow-blue-700/30 transition-transform hover:scale-105 hover:bg-primary active:scale-95 disabled:opacity-80"
       >
         {isUploading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-6 h-6 animate-spin text-white" />
         ) : (
-          <Plus className="w-4 h-4" />
+          <Plus className="w-6 h-6 text-white" />
         )}
-        {isUploading ? "Uploading..." : "Upload Record"}
       </Button>
 
       {statusText && (
-        <div className={`flex max-w-xs items-center gap-1.5 text-right text-xs font-medium ${statusClass}`}>
+        <div className={`flex max-w-xs items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-right text-xs font-medium shadow-lg backdrop-blur ${statusClass}`}>
           {StatusIcon && (
             <StatusIcon
               className={`w-3.5 h-3.5 shrink-0 ${isUploading ? "animate-spin" : ""}`}

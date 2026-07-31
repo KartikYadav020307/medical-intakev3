@@ -14,9 +14,10 @@ export interface TimelineEvent {
 
 export interface TimelineSectionProps {
   events: TimelineEvent[];
+  showHeader?: boolean;
 }
 
-export default function TimelineSection({ events }: TimelineSectionProps) {
+export default function TimelineSection({ events, showHeader = true }: TimelineSectionProps) {
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
@@ -24,23 +25,24 @@ export default function TimelineSection({ events }: TimelineSectionProps) {
       transition={{ duration: 0.5, delay: 0.5 }}
       className="mt-4"
     >
-      {/* Section Header */}
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h2 className="text-headline-md text-on-surface">
-            Recent Verified Events
-          </h2>
-          <p className="text-body-sm text-on-surface-variant mt-1">
-            Extracted facts mapped from your uploaded documents.
-          </p>
+      {showHeader && (
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <h2 className="text-headline-md text-on-surface">
+              Recent Verified Events
+            </h2>
+            <p className="text-body-sm text-on-surface-variant mt-1">
+              Extracted facts mapped from your uploaded documents.
+            </p>
+          </div>
+          <a
+            className="text-body-sm font-semibold text-primary hover:underline cursor-pointer"
+            href="#"
+          >
+            View Full Timeline
+          </a>
         </div>
-        <a
-          className="text-body-sm font-semibold text-primary hover:underline cursor-pointer"
-          href="#"
-        >
-          View Full Timeline
-        </a>
-      </div>
+      )}
 
       {/* Timeline */}
       <div className="flex flex-col gap-3 relative before:absolute before:inset-y-0 before:left-[4.5rem] before:w-px before:bg-document-border">

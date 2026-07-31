@@ -27,6 +27,7 @@ interface TimelineEntry {
 interface MedicalTimelineProps {
   data: ExtractionData;
   onItemClick: (boundingBox: BoundingBox) => void;
+  showHeader?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +108,7 @@ function buildTimeline(data: ExtractionData): TimelineEntry[] {
 export default function MedicalTimeline({
   data,
   onItemClick,
+  showHeader = true,
 }: MedicalTimelineProps) {
   const entries = buildTimeline(data);
 
@@ -118,14 +120,16 @@ export default function MedicalTimeline({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.3 }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-headline-md text-on-surface">
-          Extracted Medical History
-        </h2>
-        <span className="text-citation-code text-on-surface-variant">
-          {entries.length} items
-        </span>
-      </div>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-headline-md text-on-surface">
+            Extracted Medical History
+          </h2>
+          <span className="text-citation-code text-on-surface-variant">
+            {entries.length} items
+          </span>
+        </div>
+      )}
 
       {/* Timeline track */}
       <div className="relative pl-8">
