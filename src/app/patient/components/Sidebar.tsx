@@ -59,7 +59,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
         }`}
     >
       {/* Toggle */}
-      <div className={`flex items-center h-16 shrink-0 border-b border-slate-100 ${collapsed ? "justify-center px-0" : "px-4"}`}>
+      <div className={`h-16 flex items-center shrink-0 border-b border-slate-100 ${collapsed ? "justify-center px-0" : "px-4"}`}>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -79,7 +79,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
       </div>
 
       {/* Navigation Links */}
-      <div className={`flex-1 flex flex-col gap-1 overflow-y-auto overflow-x-hidden ${collapsed ? "px-2 pt-4" : "px-3 pt-1"}`}>
+      <div className={`flex-1 flex flex-col gap-2 overflow-y-auto overflow-x-hidden pt-1 ${collapsed ? "px-2" : "px-3"}`}>
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
 
@@ -87,7 +87,7 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`relative flex items-center rounded-xl overflow-hidden transition-all duration-200 cursor-pointer active:scale-[0.97] w-full group ${collapsed ? "h-10 justify-center" : "h-10 px-3 gap-3"} ${isActive
+              className={`relative flex items-center justify-start rounded-xl overflow-hidden transition-all duration-200 cursor-pointer active:scale-[0.97] w-full h-10 shrink-0 pl-4 pr-3 group ${isActive
                   ? "text-blue-700 font-semibold"
                   : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                 }`}
@@ -112,11 +112,9 @@ export default function Sidebar({ collapsed, onToggle, activeTab, onTabChange, o
 
               <item.icon className={`relative z-10 w-[18px] h-[18px] shrink-0 transition-colors duration-200 ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`} />
 
-              {!collapsed && (
-                <span className={`relative z-10 text-[13px] whitespace-nowrap transition-colors duration-200 ${isActive ? "font-semibold text-blue-700" : "font-medium text-slate-600 group-hover:text-slate-800"}`}>
-                  {item.label}
-                </span>
-              )}
+              <span className={`relative z-10 text-[13px] leading-none overflow-hidden whitespace-nowrap transition-all duration-300 ${collapsed ? "w-0 opacity-0 ml-0" : "w-auto opacity-100 ml-3"} ${isActive ? "font-semibold text-blue-700" : "font-medium text-slate-600 group-hover:text-slate-800"}`}>
+                {item.label}
+              </span>
             </button>
           );
 
