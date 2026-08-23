@@ -8,8 +8,8 @@ import {
   BriefcaseMedical,
   Camera,
   CheckCircle2,
+  CloudUpload,
   Dna,
-  FileUp,
   Heart,
   Loader2,
   Shield,
@@ -36,7 +36,7 @@ function DoctorOnboardingForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const inputClass =
-    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500";
+    "w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
   const labelClass = "mb-1.5 block text-sm font-medium text-slate-700";
 
   const handleCredentialChange = (
@@ -139,7 +139,7 @@ function DoctorOnboardingForm({
               Clinical Workspace
             </span>
           </h1>
-          <p className="mx-auto max-w-md text-base text-slate-500 font-sans">
+          <p className="mx-auto max-w-md text-sm text-muted-foreground font-sans">
             Verify your professional details so your clinic can securely manage
             patient records.
           </p>
@@ -149,9 +149,9 @@ function DoctorOnboardingForm({
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="relative w-full overflow-hidden rounded-3xl border border-slate-200 bg-white/70 p-8 shadow-2xl shadow-indigo-100/50 backdrop-blur-xl sm:p-10"
+          className="relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 shadow-xl sm:p-10"
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-teal-500/5" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-indigo-500 to-teal-400" />
 
           <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
             <div>
@@ -159,7 +159,7 @@ function DoctorOnboardingForm({
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50">
                   <BriefcaseMedical className="h-4.5 w-4.5 text-indigo-600" />
                 </div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   Professional Identity
                 </h2>
               </div>
@@ -229,9 +229,9 @@ function DoctorOnboardingForm({
             <div>
               <div className="mb-5 flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-100 bg-teal-50">
-                  <FileUp className="h-4.5 w-4.5 text-teal-600" />
+                  <CloudUpload className="h-4.5 w-4.5 text-teal-600" />
                 </div>
-                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   Professional Credential
                 </h2>
               </div>
@@ -242,17 +242,17 @@ function DoctorOnboardingForm({
               </label>
               <label
                 htmlFor="doctor-credential"
-                className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 px-5 py-8 text-center transition-colors hover:border-indigo-400 hover:bg-indigo-50/40"
+                className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-5 py-10 text-center transition-colors hover:border-indigo-300 hover:bg-slate-50"
               >
-                <FileUp className="h-8 w-8 text-slate-400" />
-                <span className="mt-3 text-sm font-semibold text-indigo-600">
+                <CloudUpload className="h-9 w-9 text-indigo-500" />
+                <span className="mt-4 text-sm font-semibold text-indigo-600">
                   {credentialFile ? "Replace credential" : "Upload credential"}
                 </span>
-                <span className="mt-1 text-xs text-slate-400">
+                <span className="mt-1 text-sm text-muted-foreground">
                   PDF, JPG, PNG, or WebP
                 </span>
                 {credentialFile && (
-                  <span className="mt-3 max-w-full truncate text-xs font-medium text-slate-600">
+                  <span className="mt-3 max-w-full truncate text-sm font-medium text-slate-600">
                     {credentialFile.name}
                   </span>
                 )}
@@ -270,7 +270,7 @@ function DoctorOnboardingForm({
             <div className="border-t border-slate-100" />
 
             <div className="space-y-5">
-              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <input
                   id="doctor-terms"
                   type="checkbox"
@@ -281,7 +281,7 @@ function DoctorOnboardingForm({
                 />
                 <label
                   htmlFor="doctor-terms"
-                  className="cursor-pointer text-sm leading-relaxed text-slate-600"
+                  className="cursor-pointer text-sm leading-relaxed text-muted-foreground"
                 >
                   I agree to the{" "}
                   <span className="font-semibold text-slate-800">
@@ -296,8 +296,8 @@ function DoctorOnboardingForm({
                 </label>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-900">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 text-sm text-muted-foreground">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
                 <p>
                   Your credential will be reviewed by an administrator before
                   physician verification is granted.
@@ -306,7 +306,7 @@ function DoctorOnboardingForm({
             </div>
 
             {errorMsg && (
-              <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-center text-sm font-medium text-red-600">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-600">
                 {errorMsg}
               </div>
             )}
@@ -314,10 +314,9 @@ function DoctorOnboardingForm({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="group/btn relative w-full cursor-pointer overflow-hidden rounded-xl p-[1px] disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full cursor-pointer rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:from-indigo-700 hover:to-indigo-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 to-teal-400 opacity-80 transition-opacity group-hover/btn:opacity-100" />
-              <span className="relative flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-4 text-base font-semibold text-slate-800 transition-all group-hover/btn:bg-transparent group-hover/btn:text-white">
+              <span className="flex w-full items-center justify-center gap-2.5">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -331,7 +330,7 @@ function DoctorOnboardingForm({
           </form>
         </motion.div>
 
-        <div className="mt-8 flex items-center justify-center gap-2 text-xs font-mono text-slate-400">
+        <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <span>
             STATUS:{" "}
             <span className="font-semibold uppercase text-teal-600">Secure</span>
