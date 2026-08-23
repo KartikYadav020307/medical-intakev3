@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CloudUpload,
   Dna,
+  FileUp,
   Heart,
   Loader2,
   Shield,
