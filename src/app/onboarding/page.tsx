@@ -4,8 +4,345 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { Dna, UserCircle, Heart, Shield, Camera, Loader2 } from "lucide-react";
+import {
+  BriefcaseMedical,
+  Camera,
+  CheckCircle2,
+  Dna,
+  FileUp,
+  Heart,
+  Loader2,
+  Shield,
+  Stethoscope,
+  UserCircle,
+} from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+
+type DoctorOnboardingFormProps = {
+  email: string;
+  userId: string;
+};
+
+function DoctorOnboardingForm({
+  email,
+  userId,
+}: DoctorOnboardingFormProps) {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [credentialFile, setCredentialFile] = useState<File | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const inputClass =
+    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500";
+  const labelClass = "mb-1.5 block text-sm font-medium text-slate-700";
+
+  const handleCredentialChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setCredentialFile(event.target.files?.[0] ?? null);
+    setErrorMsg(null);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMsg(null);
+
+    if (!credentialFile) {
+      setErrorMsg("Please upload your medical license or certificate.");
+      return;
+    }
+
+    if (!termsAccepted) {
+      setErrorMsg(
+        "You must accept the Terms of Service and HIPAA compliance consent to continue."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const safeFileName = credentialFile.name.replace(
+        /[^a-zA-Z0-9._-]/g,
+        "-"
+      );
+      const filePath = "credentials/" + userId + "-" + safeFileName;
+      const { error: uploadError } = await supabase.storage
+        .from("records")
+        .upload(filePath, credentialFile, { upsert: true });
+
+      if (uploadError) {
+        throw new Error("Credential upload failed: " + uploadError.message);
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("records").getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          name: fullName,
+          specialty,
+          credential_url: publicUrl,
+          onboarding_complete: true,
+          is_verified_physician: false,
+        },
+      });
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      router.push("/doctor");
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "An unexpected error occurred."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-50 text-slate-600 font-display selection:bg-indigo-500/20">
+      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
+        <div className="w-[900px] h-[900px] bg-gradient-to-tr from-indigo-500/15 via-teal-400/10 to-transparent rounded-full blur-[140px]" />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at center, rgba(15, 23, 42, 0.04) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 w-full max-w-3xl mx-auto flex flex-col items-center justify-start px-6 py-12 sm:py-16">
+        <motion.div
+          initial={{ opacity: 0, y: -15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-10 text-center"
+        >
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <Dna className="h-8 w-8 text-indigo-600" />
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
+              Medical<span className="text-indigo-600">.Intake</span>
+            </span>
+          </div>
+          <h1 className="mb-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Set Up Your{" "}
+            <span className="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">
+              Clinical Workspace
+            </span>
+          </h1>
+          <p className="mx-auto max-w-md text-base text-slate-500 font-sans">
+            Verify your professional details so your clinic can securely manage
+            patient records.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="relative w-full overflow-hidden rounded-3xl border border-slate-200 bg-white/70 p-8 shadow-2xl shadow-indigo-100/50 backdrop-blur-xl sm:p-10"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-teal-500/5" />
+
+          <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+            <div>
+              <div className="mb-5 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50">
+                  <BriefcaseMedical className="h-4.5 w-4.5 text-indigo-600" />
+                </div>
+                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                  Professional Identity
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label htmlFor="doctor-email" className={labelClass}>
+                    Email Address
+                  </label>
+                  <input
+                    id="doctor-email"
+                    type="email"
+                    value={email}
+                    disabled
+                    className={inputClass + " cursor-not-allowed bg-slate-50 text-slate-500"}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="doctor-full-name" className={labelClass}>
+                    Legal Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="doctor-full-name"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    className={inputClass}
+                    placeholder="Dr. Jane Doe"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="doctor-specialty" className={labelClass}>
+                    Medical Specialty <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Stethoscope className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <select
+                      id="doctor-specialty"
+                      required
+                      value={specialty}
+                      onChange={(event) => setSpecialty(event.target.value)}
+                      className={inputClass + " pl-11"}
+                    >
+                      <option value="" disabled>
+                        Select your specialty...
+                      </option>
+                      <option value="General Practice">General Practice</option>
+                      <option value="Cardiology">Cardiology</option>
+                      <option value="Dermatology">Dermatology</option>
+                      <option value="Family Medicine">Family Medicine</option>
+                      <option value="Internal Medicine">Internal Medicine</option>
+                      <option value="Neurology">Neurology</option>
+                      <option value="Pediatrics">Pediatrics</option>
+                      <option value="Psychiatry">Psychiatry</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100" />
+
+            <div>
+              <div className="mb-5 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-100 bg-teal-50">
+                  <FileUp className="h-4.5 w-4.5 text-teal-600" />
+                </div>
+                <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                  Professional Credential
+                </h2>
+              </div>
+
+              <label htmlFor="doctor-credential" className={labelClass}>
+                Medical License / Certificate{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <label
+                htmlFor="doctor-credential"
+                className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 px-5 py-8 text-center transition-colors hover:border-indigo-400 hover:bg-indigo-50/40"
+              >
+                <FileUp className="h-8 w-8 text-slate-400" />
+                <span className="mt-3 text-sm font-semibold text-indigo-600">
+                  {credentialFile ? "Replace credential" : "Upload credential"}
+                </span>
+                <span className="mt-1 text-xs text-slate-400">
+                  PDF, JPG, PNG, or WebP
+                </span>
+                {credentialFile && (
+                  <span className="mt-3 max-w-full truncate text-xs font-medium text-slate-600">
+                    {credentialFile.name}
+                  </span>
+                )}
+                <input
+                  id="doctor-credential"
+                  type="file"
+                  required={!credentialFile}
+                  accept="application/pdf,image/*"
+                  onChange={handleCredentialChange}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+
+            <div className="border-t border-slate-100" />
+
+            <div className="space-y-5">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <input
+                  id="doctor-terms"
+                  type="checkbox"
+                  required
+                  checked={termsAccepted}
+                  onChange={(event) => setTermsAccepted(event.target.checked)}
+                  className="mt-0.5 h-4.5 w-4.5 shrink-0 cursor-pointer rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label
+                  htmlFor="doctor-terms"
+                  className="cursor-pointer text-sm leading-relaxed text-slate-600"
+                >
+                  I agree to the{" "}
+                  <span className="font-semibold text-slate-800">
+                    Terms of Service
+                  </span>{" "}
+                  and confirm that I will handle patient information in
+                  accordance with{" "}
+                  <span className="font-semibold text-slate-800">
+                    HIPAA compliance requirements
+                  </span>
+                  . <span className="text-red-500">*</span>
+                </label>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-900">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <p>
+                  Your credential will be reviewed by an administrator before
+                  physician verification is granted.
+                </p>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-center text-sm font-medium text-red-600">
+                {errorMsg}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="group/btn relative w-full cursor-pointer overflow-hidden rounded-xl p-[1px] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 to-teal-400 opacity-80 transition-opacity group-hover/btn:opacity-100" />
+              <span className="relative flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-4 text-base font-semibold text-slate-800 transition-all group-hover/btn:bg-transparent group-hover/btn:text-white">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Securing Credentials...
+                  </>
+                ) : (
+                  "Complete Doctor Onboarding"
+                )}
+              </span>
+            </button>
+          </form>
+        </motion.div>
+
+        <div className="mt-8 flex items-center justify-center gap-2 text-xs font-mono text-slate-400">
+          <span>
+            STATUS:{" "}
+            <span className="font-semibold uppercase text-teal-600">Secure</span>
+          </span>
+          <span className="text-slate-300">·</span>
+          <span>Credential review required</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -13,6 +350,7 @@ export default function OnboardingPage() {
   // ── Auth state ──────────────────────────────────────────────────────
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   // ── Form fields ─────────────────────────────────────────────────────
@@ -46,6 +384,7 @@ export default function OnboardingPage() {
 
       setUserId(user.id);
       setEmail(user.email ?? "");
+      setRole(user.user_metadata?.role ?? null);
       setCheckingAuth(false);
     };
 
@@ -139,6 +478,27 @@ export default function OnboardingPage() {
           <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-500 font-sans">
             Securing connection...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (role === "doctor" && userId) {
+    return <DoctorOnboardingForm email={email} userId={userId} />;
+  }
+
+  if (role !== "patient") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6 text-center">
+        <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+          <Shield className="mx-auto h-10 w-10 text-amber-500" />
+          <h1 className="mt-4 text-xl font-bold text-slate-900">
+            Account type unavailable
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            We could not determine the onboarding flow for this account. Please
+            sign out and try again.
           </p>
         </div>
       </div>
