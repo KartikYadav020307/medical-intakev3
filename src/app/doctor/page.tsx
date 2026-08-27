@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, FolderOpen, RefreshCw, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -263,13 +264,10 @@ export default function DoctorDashboard() {
                     </p>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled
-                    className="w-full md:w-auto"
-                  >
-                    View Patient
+                  <Button asChild variant="outline" className="w-full md:w-auto">
+                    <Link href={`/doctor/patient/${patient.userId}`}>
+                      View Patient
+                    </Link>
                   </Button>
                 </article>
               ))}
