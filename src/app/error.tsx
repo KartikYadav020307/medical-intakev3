@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({
   error,
+  //hlo
   reset,
 }: {
   error: Error & { digest?: string };
