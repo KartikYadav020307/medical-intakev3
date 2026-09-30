@@ -1,107 +1,164 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Stethoscope, Pill, FlaskConical, AlertTriangle, Activity, User, Hash, Syringe, Users, Wine, Scan } from "lucide-react";
+import { Stethoscope, Pill, FlaskConical, AlertTriangle, Activity, User, Hash, Syringe, Users, Wine, Scan, FileText } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types (mirroring the API response shape)
 // ---------------------------------------------------------------------------
 
-interface DiagnosisItem {
-  name: string;
-  date?: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
+export type Confidence = "High" | "Medium" | "Low";
+export type BoundingBox = [number, number, number, number];
+
+export interface CitedExtractionItem {
+  confidence: Confidence;
+  boundingBox: BoundingBox;
+  sourcePage?: number;
   verified_by?: string;
 }
 
-interface MedicationItem {
+interface DiagnosisItem extends CitedExtractionItem {
+  name: string;
+  date?: string;
+}
+
+interface MedicationItem extends CitedExtractionItem {
   name: string;
   date?: string;
   dosage: string;
   frequency: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
+  duration?: string;
+  adherenceClues?: string;
 }
 
-interface LabResultItem {
+interface LabResultItem extends CitedExtractionItem {
   testName: string;
   date?: string;
   value: string;
   unit: string;
+  referenceRange?: string;
   isAbnormal?: boolean;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
 }
 
-interface AllergyItem {
+interface AllergyItem extends CitedExtractionItem {
   allergen: string;
   reaction?: string;
   severity?: string;
-  source_page?: number;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
 }
 
-interface ProcedureItem {
+interface ProcedureItem extends CitedExtractionItem {
   name: string;
   date?: string;
   body_part?: string;
-  source_page?: number;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
 }
 
-interface VitalItem {
+interface VitalItem extends CitedExtractionItem {
   measurement: string;
   value: string;
   unit?: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
+  date?: string;
 }
 
-interface PhysicianItem {
+interface PhysicianItem extends CitedExtractionItem {
   name: string;
+  role?: string;
   specialty?: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
 }
 
-interface IcdCodeItem {
+interface CodeItem extends CitedExtractionItem {
   code: string;
   description?: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
 }
 
-interface FamilyHistoryItem {
+interface FamilyHistoryItem extends CitedExtractionItem {
   condition: string;
   relative: string;
 }
 
-interface SocialHistoryItem {
-  category: "Smoking" | "Alcohol";
+interface SocialHistoryItem extends CitedExtractionItem {
+  category: "Smoking" | "Alcohol" | "Substance Use";
   status: string;
   details: string;
 }
 
-interface ImagingFindingItem {
+interface ImagingFindingItem extends CitedExtractionItem {
   bodyPart: string;
   finding: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
-  verified_by?: string;
+}
+
+interface DocumentDateItem extends CitedExtractionItem {
+  date: string;
+  dateType: string;
+}
+
+interface PathologyFindingItem extends CitedExtractionItem {
+  specimen: string;
+  finding: string;
+  interpretation: string;
+}
+
+interface SymptomItem extends CitedExtractionItem {
+  symptom: string;
+  onset: string;
+  duration: string;
+  status: string;
+}
+
+interface ChronicDiseaseIndicatorItem extends CitedExtractionItem {
+  condition: string;
+  indicator: string;
+  status: string;
+}
+
+interface VaccinationItem extends CitedExtractionItem {
+  vaccine: string;
+  date: string;
+  dose: string;
+}
+
+interface FacilityItem extends CitedExtractionItem {
+  hospitalName: string;
+  department: string;
+}
+
+interface InsuranceItem extends CitedExtractionItem {
+  provider: string;
+  policyNumber: string;
+  memberId: string;
+}
+
+interface EmergencyContactItem extends CitedExtractionItem {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
+interface FollowUpRecommendationItem extends CitedExtractionItem {
+  recommendation: string;
+  timeframe: string;
+}
+
+interface PregnancyStatusItem extends CitedExtractionItem {
+  status: string;
+  gestationalAge: string;
+  estimatedDueDate: string;
+}
+
+interface DischargeDetailItem extends CitedExtractionItem {
+  disposition: string;
+  instructions: string;
+  diagnosis: string;
+}
+
+interface ReferralRecommendationItem extends CitedExtractionItem {
+  specialty: string;
+  reason: string;
+  referredTo: string;
 }
 
 export interface ExtractionData {
   encounter_date?: string;
+  documentDates?: DocumentDateItem[];
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
@@ -109,12 +166,29 @@ export interface ExtractionData {
   procedures?: ProcedureItem[];
   vitals?: VitalItem[];
   physicians?: PhysicianItem[];
-  icdCodes?: IcdCodeItem[];
+  icdCodes?: CodeItem[];
+  cptCodes?: CodeItem[];
   familyHistory?: FamilyHistoryItem[];
   socialHistory?: SocialHistoryItem[];
   imagingFindings?: ImagingFindingItem[];
-  safetyAlerts?: { conflictFound: boolean; severity: string; description: string; };
+  pathologyFindings?: PathologyFindingItem[];
+  symptoms?: SymptomItem[];
+  chronicDiseaseIndicators?: ChronicDiseaseIndicatorItem[];
+  vaccinations?: VaccinationItem[];
+  facilities?: FacilityItem[];
+  insuranceDetails?: InsuranceItem[];
+  emergencyContacts?: EmergencyContactItem[];
+  followUpRecommendations?: FollowUpRecommendationItem[];
+  pregnancyStatus?: PregnancyStatusItem[];
+  dischargeDetails?: DischargeDetailItem[];
+  referralRecommendations?: ReferralRecommendationItem[];
+  safetyAlerts?: {
+    conflictFound: boolean;
+    severity: string;
+    description: string;
+  };
 }
+
 
 // ---------------------------------------------------------------------------
 // Props
@@ -124,7 +198,8 @@ interface ExtractedDataCardsProps {
   data: ExtractionData;
   isProcessing: boolean;
   activeHighlight: [number, number, number, number] | null;
-  onHighlight: (box: [number, number, number, number] | null) => void;
+  activeSourcePage?: number;
+  onHighlight: (box: [number, number, number, number] | null, sourcePage?: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,15 +210,20 @@ export default function ExtractedDataCards({
   data,
   isProcessing,
   activeHighlight,
+  activeSourcePage,
   onHighlight,
 }: ExtractedDataCardsProps) {
   // ── Helpers ────────────────────────────────────────────────────────
-  const isActiveBox = (box: [number, number, number, number]) =>
+  const isActiveBox = (box: [number, number, number, number], sourcePage?: number) =>
     activeHighlight &&
     box[0] === activeHighlight[0] &&
     box[1] === activeHighlight[1] &&
     box[2] === activeHighlight[2] &&
-    box[3] === activeHighlight[3];
+    box[3] === activeHighlight[3] &&
+    (!activeSourcePage || !sourcePage || activeSourcePage === sourcePage);
+
+  const toggleHighlight = (item: CitedExtractionItem) =>
+    onHighlight(isActiveBox(item.boundingBox, item.sourcePage) ? null : item.boundingBox, item.sourcePage);
 
   const confidenceBadge = (level: "High" | "Medium" | "Low") => {
     const styles = {
@@ -159,6 +239,137 @@ export default function ExtractedDataCards({
       </span>
     );
   };
+  const joinDetails = (...values: Array<string | undefined>) =>
+    values.filter((value): value is string => Boolean(value)).join(" | ");
+
+  const additionalSections: Array<{
+    key: string;
+    title: string;
+    items: Array<{
+      item: CitedExtractionItem;
+      title: string;
+      detail: string;
+    }>;
+  }> = [
+    {
+      key: "document-dates",
+      title: "Document Dates",
+      items: (data.documentDates ?? []).map((item) => ({
+        item,
+        title: item.date,
+        detail: item.dateType,
+      })),
+    },
+    {
+      key: "pathology",
+      title: "Pathology Findings",
+      items: (data.pathologyFindings ?? []).map((item) => ({
+        item,
+        title: item.finding,
+        detail: joinDetails(item.specimen, item.interpretation),
+      })),
+    },
+    {
+      key: "symptoms",
+      title: "Symptoms Timeline",
+      items: (data.symptoms ?? []).map((item) => ({
+        item,
+        title: item.symptom,
+        detail: joinDetails(item.onset, item.duration, item.status),
+      })),
+    },
+    {
+      key: "chronic",
+      title: "Chronic Disease Indicators",
+      items: (data.chronicDiseaseIndicators ?? []).map((item) => ({
+        item,
+        title: item.condition,
+        detail: joinDetails(item.status, item.indicator),
+      })),
+    },
+    {
+      key: "vaccinations",
+      title: "Vaccinations",
+      items: (data.vaccinations ?? []).map((item) => ({
+        item,
+        title: item.vaccine,
+        detail: joinDetails(item.date, item.dose),
+      })),
+    },
+    {
+      key: "cpt",
+      title: "CPT / HCPCS Codes",
+      items: (data.cptCodes ?? []).map((item) => ({
+        item,
+        title: item.code,
+        detail: item.description ?? "",
+      })),
+    },
+    {
+      key: "facilities",
+      title: "Hospital & Department",
+      items: (data.facilities ?? []).map((item) => ({
+        item,
+        title: item.hospitalName,
+        detail: item.department,
+      })),
+    },
+    {
+      key: "insurance",
+      title: "Insurance Details",
+      items: (data.insuranceDetails ?? []).map((item) => ({
+        item,
+        title: item.provider || "Insurance record",
+        detail: joinDetails(item.policyNumber, item.memberId),
+      })),
+    },
+    {
+      key: "contacts",
+      title: "Emergency Contacts",
+      items: (data.emergencyContacts ?? []).map((item) => ({
+        item,
+        title: item.name,
+        detail: joinDetails(item.relationship, item.phone),
+      })),
+    },
+    {
+      key: "follow-up",
+      title: "Follow-up Recommendations",
+      items: (data.followUpRecommendations ?? []).map((item) => ({
+        item,
+        title: item.recommendation,
+        detail: item.timeframe,
+      })),
+    },
+    {
+      key: "pregnancy",
+      title: "Pregnancy Status",
+      items: (data.pregnancyStatus ?? []).map((item) => ({
+        item,
+        title: item.status,
+        detail: joinDetails(item.gestationalAge, item.estimatedDueDate),
+      })),
+    },
+    {
+      key: "discharge",
+      title: "Discharge Details",
+      items: (data.dischargeDetails ?? []).map((item) => ({
+        item,
+        title: item.diagnosis || item.disposition || "Discharge detail",
+        detail: joinDetails(item.disposition, item.instructions),
+      })),
+    },
+    {
+      key: "referrals",
+      title: "Referral Recommendations",
+      items: (data.referralRecommendations ?? []).map((item) => ({
+        item,
+        title: item.specialty || item.referredTo || "Referral",
+        detail: joinDetails(item.reason, item.referredTo),
+      })),
+    },
+  ].filter((section) => section.items.length > 0);
+
 
   // ── Render ─────────────────────────────────────────────────────────
   if (isProcessing) {
@@ -206,9 +417,9 @@ export default function ExtractedDataCards({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* ── Diagnoses ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 ">
               <Stethoscope className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -232,7 +443,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(d.boundingBox) ? null : d.boundingBox)
+                toggleHighlight(d)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(d.boundingBox)
                   ? "border-blue-500 bg-blue-50/50 shadow-[0_0_0_1px_rgba(59,130,246,1)] scale-[1.02]"
@@ -250,9 +461,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Medications ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 ">
               <Pill className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -276,7 +487,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(m.boundingBox) ? null : m.boundingBox)
+                toggleHighlight(m)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(m.boundingBox)
                   ? "border-amber-500 bg-amber-50/50 shadow-[0_0_0_1px_rgba(245,158,11,1)] scale-[1.02]"
@@ -288,9 +499,9 @@ export default function ExtractedDataCards({
                   <span className="text-sm font-medium text-slate-800 block leading-snug">
                     {m.name}
                   </span>
-                  {(m.dosage || m.frequency) && (
+                  {(m.dosage || m.frequency || m.duration || m.adherenceClues) && (
                     <span className="text-xs font-medium text-slate-500 mt-1.5 block">
-                      {[m.dosage, m.frequency].filter(Boolean).join(" · ")}
+                      {[m.dosage, m.frequency, m.duration, m.adherenceClues].filter(Boolean).join(" · ")}
                     </span>
                   )}
                 </div>
@@ -301,9 +512,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Lab Results ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 ">
               <FlaskConical className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -327,7 +538,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(l.boundingBox) ? null : l.boundingBox)
+                toggleHighlight(l)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(l.boundingBox)
                   ? "border-emerald-500 bg-emerald-50/50 shadow-[0_0_0_1px_rgba(16,185,129,1)] scale-[1.02]"
@@ -355,9 +566,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Allergies ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-red-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-red-200/60 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-600 ">
               <AlertTriangle className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -381,7 +592,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(a.boundingBox) ? null : a.boundingBox)
+                toggleHighlight(a)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(a.boundingBox)
                   ? "border-red-500 bg-red-50/50 shadow-[0_0_0_1px_rgba(239,68,68,1)] scale-[1.02]"
@@ -401,9 +612,9 @@ export default function ExtractedDataCards({
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {a.confidence && confidenceBadge(a.confidence)}
-                  {a.source_page && (
+                  {a.sourcePage && (
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-                      Pg {a.source_page}
+                      Pg {a.sourcePage}
                     </span>
                   )}
                 </div>
@@ -413,9 +624,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Procedures ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-indigo-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-indigo-200/60 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 ">
               <Syringe className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -439,7 +650,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(p.boundingBox) ? null : p.boundingBox)
+                toggleHighlight(p)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(p.boundingBox)
                   ? "border-indigo-500 bg-indigo-50/50 shadow-[0_0_0_1px_rgba(99,102,241,1)] scale-[1.02]"
@@ -459,9 +670,9 @@ export default function ExtractedDataCards({
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {p.confidence && confidenceBadge(p.confidence)}
-                  {p.source_page && (
+                  {p.sourcePage && (
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
-                      Pg {p.source_page}
+                      Pg {p.sourcePage}
                     </span>
                   )}
                 </div>
@@ -471,9 +682,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Vitals ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-sky-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-sky-200/60 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600 ">
               <Activity className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -497,7 +708,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(v.boundingBox) ? null : v.boundingBox)
+                toggleHighlight(v)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(v.boundingBox)
                   ? "border-sky-500 bg-sky-50/50 shadow-[0_0_0_1px_rgba(14,165,233,1)] scale-[1.02]"
@@ -525,9 +736,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── Physicians ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-violet-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/60 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 ">
               <User className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -551,7 +762,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(ph.boundingBox) ? null : ph.boundingBox)
+                toggleHighlight(ph)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(ph.boundingBox)
                   ? "border-violet-500 bg-violet-50/50 shadow-[0_0_0_1px_rgba(139,92,246,1)] scale-[1.02]"
@@ -563,9 +774,9 @@ export default function ExtractedDataCards({
                   <span className="text-sm font-semibold text-slate-800 leading-snug">
                     {ph.name}
                   </span>
-                  {ph.specialty && (
+                  {(ph.role || ph.specialty) && (
                     <span className="text-xs font-medium text-slate-500 mt-1.5 block">
-                      {ph.specialty}
+                      {ph.role || ph.specialty}
                     </span>
                   )}
                 </div>
@@ -576,9 +787,9 @@ export default function ExtractedDataCards({
         </div>
 
         {/* ── ICD Codes ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-pink-200/60 p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-pink-200/60 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 shadow-inner">
+            <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 ">
               <Hash className="w-4 h-4" />
             </div>
             <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -602,7 +813,7 @@ export default function ExtractedDataCards({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() =>
-                onHighlight(isActiveBox(icd.boundingBox) ? null : icd.boundingBox)
+                toggleHighlight(icd)
               }
               className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(icd.boundingBox)
                   ? "border-pink-500 bg-pink-50/50 shadow-[0_0_0_1px_rgba(236,72,153,1)] scale-[1.02]"
@@ -628,9 +839,9 @@ export default function ExtractedDataCards({
 
         {/* ── Family History ── */}
         {data.familyHistory && data.familyHistory.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-rose-200/60 p-6 shadow-sm">
+          <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-rose-200/60 p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 ">
                 <Users className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -647,7 +858,8 @@ export default function ExtractedDataCards({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="p-4 rounded-2xl border border-slate-200 bg-white mb-3 last:mb-0"
+                onClick={() => toggleHighlight(fh)}
+                className="p-4 rounded-2xl border border-slate-200 bg-white mb-3 last:mb-0 cursor-pointer hover:border-rose-300"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -658,6 +870,7 @@ export default function ExtractedDataCards({
                       {fh.relative}
                     </span>
                   </div>
+                  {confidenceBadge(fh.confidence)}
                 </div>
               </motion.div>
             ))}
@@ -666,9 +879,9 @@ export default function ExtractedDataCards({
 
         {/* ── Social History ── */}
         {data.socialHistory && data.socialHistory.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-fuchsia-200/60 p-6 shadow-sm">
+          <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-fuchsia-200/60 p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-fuchsia-50 flex items-center justify-center text-fuchsia-600 shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-fuchsia-50 flex items-center justify-center text-fuchsia-600 ">
                 <Wine className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -685,7 +898,8 @@ export default function ExtractedDataCards({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="p-4 rounded-2xl border border-slate-200 bg-white mb-3 last:mb-0"
+                onClick={() => toggleHighlight(sh)}
+                className="p-4 rounded-2xl border border-slate-200 bg-white mb-3 last:mb-0 cursor-pointer hover:border-fuchsia-300"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -696,6 +910,7 @@ export default function ExtractedDataCards({
                       {[sh.status, sh.details].filter(Boolean).join(" · ")}
                     </span>
                   </div>
+                  {confidenceBadge(sh.confidence)}
                 </div>
               </motion.div>
             ))}
@@ -704,9 +919,9 @@ export default function ExtractedDataCards({
 
         {/* ── Imaging Findings ── */}
         {data.imagingFindings && data.imagingFindings.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl border border-cyan-200/60 p-6 shadow-sm">
+          <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-cyan-200/60 p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-600 shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-600 ">
                 <Scan className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-slate-800 tracking-tight">
@@ -724,7 +939,7 @@ export default function ExtractedDataCards({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() =>
-                  onHighlight(isActiveBox(img.boundingBox) ? null : img.boundingBox)
+                  toggleHighlight(img)
                 }
                 className={`p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 ${isActiveBox(img.boundingBox)
                     ? "border-cyan-500 bg-cyan-50/50 shadow-[0_0_0_1px_rgba(6,182,212,1)] scale-[1.02]"
@@ -748,6 +963,58 @@ export default function ExtractedDataCards({
             ))}
           </div>
         )}
+        {additionalSections.map((section) => (
+          <div
+            key={section.key}
+            className="bg-white/80 backdrop-blur-xl rounded-xl border border-slate-200 p-6 shadow-sm"
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 ">
+                <FileText className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-800 tracking-tight">
+                {section.title}
+              </h3>
+              <span className="ml-auto text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                {section.items.length}
+              </span>
+            </div>
+
+            {section.items.map(({ item, title, detail }, index) => (
+              <motion.button
+                type="button"
+                key={section.key + "-" + index}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.04 }}
+                onClick={() => toggleHighlight(item)}
+                className={
+                  "w-full text-left p-4 rounded-2xl border cursor-pointer transition-all duration-300 mb-3 last:mb-0 " +
+                  (isActiveBox(item.boundingBox, item.sourcePage)
+                    ? "border-indigo-500 bg-indigo-50/50 shadow-sm"
+                    : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30")
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="text-sm font-semibold text-slate-800 leading-snug block">
+                      {title}
+                    </span>
+                    {detail && (
+                      <span className="text-xs font-medium text-slate-500 mt-1.5 block leading-relaxed">
+                        {detail}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mt-2 block">
+                      Page {item.sourcePage ?? 1}
+                    </span>
+                  </div>
+                  {confidenceBadge(item.confidence)}
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        ))}
       </div>
     </motion.div>
   );

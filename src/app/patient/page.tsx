@@ -8,7 +8,7 @@ import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import UploadHero from "./components/UploadHero";
 import { supabase } from "../../../lib/supabase";
-import type { ExtractionData } from "./components/ExtractedDataCards";
+import ExtractedDataCards, { type ExtractionData } from "./components/ExtractedDataCards";
 import MedicalTimeline from "./components/MedicalTimeline";
 import TimelineSection from "./components/TimelineSection";
 import ProcessingTracker from "./components/ProcessingTracker";
@@ -215,21 +215,6 @@ export default function PatientDashboard() {
         };
       };
 
-      // Prioritize AI-extracted encounter date, fallback to upload date
-      const encounterDate = data?.encounter_date;
-      const hasValidEncounterDate = encounterDate && encounterDate !== "Unknown";
-
-      const dateSource = hasValidEncounterDate
-        ? new Date(encounterDate)
-        : new Date(record.created_at);
-
-      const date = dateSource.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-      // rawDate used for sorting — prefer encounter date for chronological accuracy
-      const rawDate = hasValidEncounterDate
-        ? new Date(encounterDate).toISOString()
-        : record.created_at;
-
       if (data?.diagnoses) {
         data.diagnoses.forEach((d) => {
           const { date, rawDate } = getTimelineDate(d.date);
@@ -330,6 +315,7 @@ export default function PatientDashboard() {
   const [activeHighlight, setActiveHighlight] = useState<
     [number, number, number, number] | null
   >(null);
+  const [activeSourcePage, setActiveSourcePage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
@@ -497,11 +483,15 @@ export default function PatientDashboard() {
   }, [recordToDelete]);
 
   // ── Sign-Out Handler (shared by Sidebar + TopBar avatar dropdown) ───
-  const handleSignOut = useCallback(() => {
-    router.push("/");
-    supabase.auth.signOut().then(() => {
+  const handleSignOut = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.replace("/");
       router.refresh();
-    });
+    } catch {
+      setToast({ message: "Could not sign out. Please try again.", type: "error" });
+    }
   }, [router]);
 
   // ── Global Search Result Handler ────────────────────────────────────
@@ -520,6 +510,7 @@ export default function PatientDashboard() {
     setLoadedPdfUrl(null);
     setExtractionData(null);
     setActiveHighlight(null);
+    setActiveSourcePage(1);
     setIsModalOpen(false);
   }, []);
 
@@ -555,7 +546,7 @@ export default function PatientDashboard() {
 
   const renderMasterTimeline = (showHeader = true) => (
     masterTimeline.length === 0 ? (
-      <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
+      <div className="workspace-empty">
         <FileText className="w-12 h-12 text-slate-300 mb-4" />
         <h3 className="text-lg font-semibold text-slate-900">No medical records yet</h3>
         <p className="text-slate-500 mt-1 max-w-sm">Upload your first PDF medical document to start extracting insights and building your timeline.</p>
@@ -590,7 +581,7 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="bg-slate-50 text-slate-900 font-body antialiased flex min-h-screen">
+    <div className="locus-workspace font-body antialiased flex min-h-screen"><a href="#workspace-content" className="skip-link">Skip to workspace</a>
       {toast && (
         <div
           role={toast.type === "error" ? "alert" : "status"}
@@ -616,10 +607,11 @@ export default function PatientDashboard() {
 
       {/* Main workspace — margin tracks sidebar width */}
       <main
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${sidebarCollapsed ? "ml-[68px]" : "ml-60"
+        id="workspace-content" className={`workspace-main flex-1 flex flex-col min-h-screen ${sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
           }`}
       >
         <TopBar
+          onHelpClick={handleHelpClick}
           records={patientHistory}
           onSearchResultClick={handleSearchResultClick}
           notifications={notifications}
@@ -645,15 +637,10 @@ export default function PatientDashboard() {
         />
 
         {/* Single-column dashboard canvas */}
-        <div className={`p-8 flex flex-col gap-5 mx-auto w-full ${activeTab === "verification" ? "" : "max-w-5xl"}`}>
+        <div className={`workspace-canvas flex flex-col mx-auto w-full ${activeTab === "verification" ? "max-w-none" : ""}`}>
           {activeTab === "upload" && (
             <>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Patient Dashboard</h2>
-                <p className="text-slate-500 text-sm mt-1">
-                  Review your extracted records, timelines, and clinical signals.
-                </p>
-              </div>
+              <div className="workspace-heading"><div><p className="eyebrow">Your health, connected</p><h2>A clearer picture starts here.</h2><p>Your records, the details, and everything in between.</p></div><span className="workspace-date">{patientHistory.length} {patientHistory.length === 1 ? "record" : "records"}<br />in your workspace</span></div>
               <UploadHero onUploadComplete={handleUploadComplete} />
 
               {/* Active Processing Tracker */}
@@ -671,7 +658,7 @@ export default function PatientDashboard() {
               {/* Extraction error banner */}
               {extractionError && (
                 <div className="p-5 bg-red-50 border border-red-100 rounded-2xl shadow-sm flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 shadow-inner">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 ">
                     <span className="text-red-600 text-xl font-bold">!</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -698,12 +685,12 @@ export default function PatientDashboard() {
               {(extractionData || isProcessing) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Diagnoses Summary */}
-                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 ">
                       {isProcessing ? <Loader2 className="w-7 h-7 text-blue-600 animate-spin" /> : <Stethoscope className="w-7 h-7 text-blue-600" />}
                     </div>
                     <div>
-                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                      <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                         {isProcessing ? "-" : extractionData?.diagnoses.length || 0}
                       </p>
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
@@ -711,12 +698,12 @@ export default function PatientDashboard() {
                   </div>
 
                   {/* Medications Summary */}
-                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 ">
                       {isProcessing ? <Loader2 className="w-7 h-7 text-amber-600 animate-spin" /> : <Pill className="w-7 h-7 text-amber-600" />}
                     </div>
                     <div>
-                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                      <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                         {isProcessing ? "-" : extractionData?.medications.length || 0}
                       </p>
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
@@ -724,12 +711,12 @@ export default function PatientDashboard() {
                   </div>
 
                   {/* Lab Results Summary */}
-                  <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+                  <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 ">
                       {isProcessing ? <Loader2 className="w-7 h-7 text-emerald-600 animate-spin" /> : <FlaskConical className="w-7 h-7 text-emerald-600" />}
                     </div>
                     <div>
-                      <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                      <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                         {isProcessing ? "-" : extractionData?.labResults.length || 0}
                       </p>
                       <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
@@ -743,12 +730,27 @@ export default function PatientDashboard() {
                 <MedicalTimeline
                   data={extractionData}
                   showHeader={false}
-                  onItemClick={(box) => {
+                  onItemClick={(box, sourcePage) => {
                     setActiveHighlight(box);
+                    setActiveSourcePage(sourcePage ?? 1);
                     setIsModalOpen(true);
                   }}
                 />
               )}
+              {extractionData && !isProcessing && (
+                <ExtractedDataCards
+                  data={extractionData}
+                  isProcessing={false}
+                  activeHighlight={activeHighlight}
+                  activeSourcePage={activeSourcePage}
+                  onHighlight={(box, sourcePage) => {
+                    setActiveHighlight(box);
+                    setActiveSourcePage(sourcePage ?? 1);
+                    if (box) setIsModalOpen(true);
+                  }}
+                />
+              )}
+
 
               {renderMasterTimeline(false)}
             </>)}
@@ -756,12 +758,12 @@ export default function PatientDashboard() {
           {activeTab === "records" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Upload History</h2>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Your records</h2>
                 <p className="text-slate-500 text-sm mt-1">Review your previously processed medical documents.</p>
               </div>
 
               {patientHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 text-center">
+                <div className="workspace-empty">
                   <FileText className="w-12 h-12 text-slate-300 mb-4" />
                   <h3 className="text-lg font-semibold text-slate-900">No medical records yet</h3>
                   <p className="text-slate-500 mt-1 max-w-sm">Upload your first PDF medical document to start extracting insights and building your timeline.</p>
@@ -775,9 +777,9 @@ export default function PatientDashboard() {
                     const lCount = data?.labResults?.length || 0;
 
                     return (
-                      <div key={record.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1 group">
+                      <div key={record.id} className="bg-white rounded-xl border border-slate-200 p-6 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5 group">
                         <div className="flex items-start justify-between mb-4">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors shadow-inner">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors ">
                             <FileText className="w-6 h-6" />
                           </div>
                           <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
@@ -812,7 +814,7 @@ export default function PatientDashboard() {
           {activeTab === "timeline" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Master Timeline</h2>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Your health timeline</h2>
                 <p className="text-slate-500 text-sm mt-1">A unified chronological view of all extracted medical events.</p>
               </div>
 
@@ -831,12 +833,12 @@ export default function PatientDashboard() {
           {activeTab === "analytics" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Health Analytics</h2>
+                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Your health at a glance</h2>
                 <p className="text-slate-500 text-sm mt-1">Aggregate insights across your entire medical history.</p>
               </div>
 
               {patientHistory.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/60 shadow-sm flex flex-col items-center">
+                <div className="p-12 text-center bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
                   <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100 text-slate-400">
                     <Activity className="w-8 h-8" />
                   </div>
@@ -847,36 +849,36 @@ export default function PatientDashboard() {
                 <div className="flex flex-col gap-8">
                   {/* Top Level Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
-                      <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+                    <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 ">
                         <Stethoscope className="w-7 h-7 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                           {analyticsData.totalDiagnoses}
                         </p>
                         <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Diagnoses Found</p>
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+                    <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 ">
                         <Pill className="w-7 h-7 text-amber-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                           {analyticsData.totalMedications}
                         </p>
                         <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Medications</p>
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] transition-all duration-300">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+                    <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none transition-all duration-300">
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 ">
                         <FlaskConical className="w-7 h-7 text-emerald-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+                        <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                           {analyticsData.totalLabs}
                         </p>
                         <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">Lab Results</p>
@@ -890,7 +892,7 @@ export default function PatientDashboard() {
                       <h3 className="text-lg font-bold text-slate-800">Recent Activity & Trends</h3>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-200/60 overflow-hidden shadow-sm">
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                       {analyticsData.recentActivity.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 text-sm">No recent diagnoses or medications found.</div>
                       ) : (
@@ -898,7 +900,7 @@ export default function PatientDashboard() {
                           {analyticsData.recentActivity.map((activity, idx) => (
                             <div key={idx} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
                               <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-inner border ${activity.type === 'diagnosis' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0  border ${activity.type === 'diagnosis' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                                   }`}>
                                   {activity.type === 'diagnosis' ? <Stethoscope className="w-5 h-5" /> : <Pill className="w-5 h-5" />}
                                 </div>
@@ -922,7 +924,7 @@ export default function PatientDashboard() {
           )}
 
           {(!["upload", "records", "timeline", "analytics", "verification"].includes(activeTab)) && (
-            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200/60 shadow-sm mt-8 animate-in fade-in duration-500">
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-slate-200 shadow-sm mt-8 animate-in fade-in duration-500">
               <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
                 <FolderOpen className="w-8 h-8 text-slate-400" />
               </div>
@@ -942,14 +944,18 @@ export default function PatientDashboard() {
         onClose={handleCitationModalClose}
         pdfUrl={loadedPdfUrl}
         activeHighlight={activeHighlight}
+        activeSourcePage={activeSourcePage}
         extractionData={extractionData}
-        onItemClick={(box) => setActiveHighlight(box)}
+        onItemClick={(box, sourcePage) => {
+          setActiveHighlight(box);
+          setActiveSourcePage(sourcePage ?? 1);
+        }}
       />
 
       {/* Delete Confirmation Modal */}
       {recordToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200/60">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-200">
             <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-5 border border-red-100">
               <Trash2 className="w-7 h-7 text-red-600" />
             </div>

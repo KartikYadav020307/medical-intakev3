@@ -251,6 +251,25 @@ export default function DoctorPatientProfile() {
       imagingFindings: records.flatMap(
         (record) => record.extracted_data?.imagingFindings ?? []
       ),
+      documentDates: records.flatMap((record) => record.extracted_data?.documentDates ?? []),
+      cptCodes: records.flatMap((record) => record.extracted_data?.cptCodes ?? []),
+      pathologyFindings: records.flatMap((record) => record.extracted_data?.pathologyFindings ?? []),
+      symptoms: records.flatMap((record) => record.extracted_data?.symptoms ?? []),
+      chronicDiseaseIndicators: records.flatMap(
+        (record) => record.extracted_data?.chronicDiseaseIndicators ?? []
+      ),
+      vaccinations: records.flatMap((record) => record.extracted_data?.vaccinations ?? []),
+      facilities: records.flatMap((record) => record.extracted_data?.facilities ?? []),
+      insuranceDetails: records.flatMap((record) => record.extracted_data?.insuranceDetails ?? []),
+      emergencyContacts: records.flatMap((record) => record.extracted_data?.emergencyContacts ?? []),
+      followUpRecommendations: records.flatMap(
+        (record) => record.extracted_data?.followUpRecommendations ?? []
+      ),
+      pregnancyStatus: records.flatMap((record) => record.extracted_data?.pregnancyStatus ?? []),
+      dischargeDetails: records.flatMap((record) => record.extracted_data?.dischargeDetails ?? []),
+      referralRecommendations: records.flatMap(
+        (record) => record.extracted_data?.referralRecommendations ?? []
+      ),
       safetyAlerts,
     };
   }, [records]);
@@ -271,7 +290,7 @@ export default function DoctorPatientProfile() {
 
   return (
     <AuthGuard requiredRole="doctor">
-      <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-950 sm:px-8 lg:px-12">
+      <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-900 sm:px-8 lg:px-12">
         <div className="mx-auto w-full max-w-7xl">
           <header className="mb-8 flex flex-col gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -285,7 +304,7 @@ export default function DoctorPatientProfile() {
               <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-600">
                 Patient Profile
               </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
                 Patient {formatPatientId(patientId)}
               </h1>
               <p className="mt-2 font-mono text-sm text-slate-500">{patientId}</p>
@@ -294,7 +313,7 @@ export default function DoctorPatientProfile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Records
               </p>
-              <p className="mt-1 text-xl font-semibold text-slate-950">
+              <p className="mt-1 text-xl font-semibold text-slate-900">
                 {records.length}
               </p>
             </div>
@@ -372,12 +391,12 @@ export default function DoctorPatientProfile() {
 
                 <div className="flex flex-col gap-8">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <div className="flex items-center gap-5 rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 shadow-inner">
+                    <div className="flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 ">
                         <Stethoscope className="h-7 w-7 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold leading-none tracking-tight text-slate-800">
+                        <p className="text-4xl font-normal leading-none tracking-tight text-slate-800">
                           {analyticsData.totalDiagnoses}
                         </p>
                         <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
@@ -386,12 +405,12 @@ export default function DoctorPatientProfile() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-5 rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 shadow-inner">
+                    <div className="flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 ">
                         <Pill className="h-7 w-7 text-amber-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold leading-none tracking-tight text-slate-800">
+                        <p className="text-4xl font-normal leading-none tracking-tight text-slate-800">
                           {analyticsData.totalMedications}
                         </p>
                         <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
@@ -400,12 +419,12 @@ export default function DoctorPatientProfile() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-5 rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 shadow-inner">
+                    <div className="flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ">
                         <FlaskConical className="h-7 w-7 text-emerald-600" />
                       </div>
                       <div>
-                        <p className="text-4xl font-semibold leading-none tracking-tight text-slate-800">
+                        <p className="text-4xl font-normal leading-none tracking-tight text-slate-800">
                           {analyticsData.totalLabs}
                         </p>
                         <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
@@ -423,7 +442,7 @@ export default function DoctorPatientProfile() {
                       </h3>
                     </div>
 
-                    <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                       {analyticsData.recentActivity.length === 0 ? (
                         <div className="p-8 text-center text-sm text-slate-500">
                           No recent diagnoses or medications found.
@@ -437,7 +456,7 @@ export default function DoctorPatientProfile() {
                             >
                               <div className="flex items-center gap-4">
                                 <div
-                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-inner ${activity.type === "diagnosis"
+                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border  ${activity.type === "diagnosis"
                                     ? "border-blue-100 bg-blue-50 text-blue-600"
                                     : "border-amber-100 bg-amber-50 text-amber-600"
                                     }`}

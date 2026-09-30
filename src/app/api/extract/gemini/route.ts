@@ -7,90 +7,160 @@ export const runtime = "nodejs";
 // Types
 // ---------------------------------------------------------------------------
 
-interface DiagnosisItem {
-  name: string;
-  date: string;
-  confidence: "High" | "Medium" | "Low";
+type Confidence = "High" | "Medium" | "Low";
+
+interface CitationMetadata {
+  confidence: Confidence;
   boundingBox: [number, number, number, number];
+  sourcePage: number;
 }
 
-interface MedicationItem {
+interface DiagnosisItem extends CitationMetadata {
+  name: string;
+  date: string;
+}
+
+interface MedicationItem extends CitationMetadata {
   name: string;
   date: string;
   dosage: string;
   frequency: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
+  duration: string;
+  adherenceClues: string;
 }
 
-interface LabResultItem {
+interface LabResultItem extends CitationMetadata {
   testName: string;
   date: string;
   value: string;
   unit: string;
+  referenceRange: string;
   isAbnormal: boolean;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
 }
 
-interface AllergyItem {
+interface AllergyItem extends CitationMetadata {
   allergen: string;
   reaction: string;
   severity: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
 }
 
-interface ProcedureItem {
+interface ProcedureItem extends CitationMetadata {
   name: string;
   date: string;
   body_part: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
 }
 
-interface VitalItem {
+interface VitalItem extends CitationMetadata {
   measurement: string;
   value: string;
   unit: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
+  date: string;
 }
 
-interface PhysicianItem {
+interface PhysicianItem extends CitationMetadata {
   name: string;
   role: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
 }
 
-interface IcdCodeItem {
+interface IcdCodeItem extends CitationMetadata {
   code: string;
   description: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
 }
 
-interface FamilyHistoryItem {
+interface FamilyHistoryItem extends CitationMetadata {
   condition: string;
   relative: string;
 }
 
-interface SocialHistoryItem {
-  category: "Smoking" | "Alcohol";
+interface SocialHistoryItem extends CitationMetadata {
+  category: "Smoking" | "Alcohol" | "Substance Use";
   status: string;
   details: string;
 }
 
-interface ImagingFindingItem {
+interface ImagingFindingItem extends CitationMetadata {
   bodyPart: string;
   finding: string;
-  confidence: "High" | "Medium" | "Low";
-  boundingBox: [number, number, number, number];
+}
+
+interface DocumentDateItem extends CitationMetadata {
+  date: string;
+  dateType: string;
+}
+
+interface PathologyFindingItem extends CitationMetadata {
+  specimen: string;
+  finding: string;
+  interpretation: string;
+}
+
+interface SymptomItem extends CitationMetadata {
+  symptom: string;
+  onset: string;
+  duration: string;
+  status: string;
+}
+
+interface ChronicDiseaseIndicatorItem extends CitationMetadata {
+  condition: string;
+  indicator: string;
+  status: string;
+}
+
+interface VaccinationItem extends CitationMetadata {
+  vaccine: string;
+  date: string;
+  dose: string;
+}
+
+interface CptCodeItem extends CitationMetadata {
+  code: string;
+  description: string;
+}
+
+interface FacilityItem extends CitationMetadata {
+  hospitalName: string;
+  department: string;
+}
+
+interface InsuranceItem extends CitationMetadata {
+  provider: string;
+  policyNumber: string;
+  memberId: string;
+}
+
+interface EmergencyContactItem extends CitationMetadata {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
+interface FollowUpRecommendationItem extends CitationMetadata {
+  recommendation: string;
+  timeframe: string;
+}
+
+interface PregnancyStatusItem extends CitationMetadata {
+  status: string;
+  gestationalAge: string;
+  estimatedDueDate: string;
+}
+
+interface DischargeDetailItem extends CitationMetadata {
+  disposition: string;
+  instructions: string;
+  diagnosis: string;
+}
+
+interface ReferralRecommendationItem extends CitationMetadata {
+  specialty: string;
+  reason: string;
+  referredTo: string;
 }
 
 interface GeminiExtractionResult {
   encounter_date: string;
+  documentDates: DocumentDateItem[];
   diagnoses: DiagnosisItem[];
   medications: MedicationItem[];
   labResults: LabResultItem[];
@@ -102,6 +172,18 @@ interface GeminiExtractionResult {
   familyHistory: FamilyHistoryItem[];
   socialHistory: SocialHistoryItem[];
   imagingFindings: ImagingFindingItem[];
+  pathologyFindings: PathologyFindingItem[];
+  symptoms: SymptomItem[];
+  chronicDiseaseIndicators: ChronicDiseaseIndicatorItem[];
+  vaccinations: VaccinationItem[];
+  cptCodes: CptCodeItem[];
+  facilities: FacilityItem[];
+  insuranceDetails: InsuranceItem[];
+  emergencyContacts: EmergencyContactItem[];
+  followUpRecommendations: FollowUpRecommendationItem[];
+  pregnancyStatus: PregnancyStatusItem[];
+  dischargeDetails: DischargeDetailItem[];
+  referralRecommendations: ReferralRecommendationItem[];
 }
 
 interface SafetyAlerts {
@@ -154,369 +236,301 @@ function validationFailedResponse(
 // JSON Schema for structured output enforcement
 // ---------------------------------------------------------------------------
 
+const TEXT = (description: string) => ({
+  type: "string" as const,
+  description,
+});
+
+const CITATION_PROPERTIES = {
+  confidence: {
+    type: "string" as const,
+    enum: ["High", "Medium", "Low"],
+    description: "Confidence in this exact extraction.",
+  },
+  boundingBox: {
+    type: "array" as const,
+    description:
+      "Tight [ymin, xmin, ymax, xmax] coordinates for the source text, normalized to a 1000x1000 page.",
+    items: { type: "integer" as const },
+  },
+  sourcePage: {
+    type: "integer" as const,
+    description: "One-based PDF page number containing the cited source text.",
+  },
+};
+
+function citedArray(
+  description: string,
+  properties: Record<string, object>,
+  required: string[],
+) {
+  return {
+    type: "array" as const,
+    description,
+    items: {
+      type: "object" as const,
+      properties: { ...properties, ...CITATION_PROPERTIES },
+      required: [...required, "confidence", "boundingBox", "sourcePage"],
+    },
+  };
+}
+
 const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
-    encounter_date: {
-      type: "string",
-      description:
-        "The date of the medical encounter, visit, or when the document was authored. Actively search for headers like 'Date of Visit', 'Date of Service', 'Report Date', 'Encounter Date', 'Date of Exam', or any document-level date. Use YYYY-MM-DD format. If no date can be determined, return 'Unknown'.",
-    },
-    diagnoses: {
-      type: "array",
-      description: "List of medical diagnoses found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "The exact diagnosis text as written in the document.",
-          },
-          date: {
-            type: "string",
-            description:
-              "The most accurate clinical date associated with this diagnosis, formatted as a strict ISO 8601 YYYY-MM-DD string.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level: High for clearly stated diagnoses, Medium for probable, Low for ambiguous.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["name", "date", "confidence", "boundingBox"],
+    encounter_date: TEXT(
+      "Primary encounter or document date in YYYY-MM-DD format; return 'Unknown' only when no date is documented.",
+    ),
+    documentDates: citedArray(
+      "Document, encounter, admission, discharge, collection, report, or service dates explicitly present.",
+      {
+        date: TEXT("Date in YYYY-MM-DD format."),
+        dateType: TEXT("Label such as Encounter, Admission, Discharge, Collection, Report, or Service."),
       },
-    },
-    medications: {
-      type: "array",
-      description: "List of medications found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "The medication name as written in the document.",
-          },
-          date: {
-            type: "string",
-            description:
-              "The most accurate clinical date associated with this medication, formatted as a strict ISO 8601 YYYY-MM-DD string.",
-          },
-          dosage: {
-            type: "string",
-            description:
-              "The dosage amount and form (e.g. '500mg tablet'). Empty string if not specified.",
-          },
-          frequency: {
-            type: "string",
-            description:
-              "How often the medication is taken (e.g. 'twice daily'). Empty string if not specified.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this medication extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["name", "date", "dosage", "frequency", "confidence", "boundingBox"],
+      ["date", "dateType"],
+    ),
+    diagnoses: citedArray(
+      "Diagnoses and conditions explicitly documented.",
+      {
+        name: TEXT("Exact diagnosis or condition text."),
+        date: TEXT("Most accurate associated clinical date in YYYY-MM-DD format, or 'Unknown'."),
       },
-    },
-    labResults: {
-      type: "array",
-      description: "List of laboratory test results found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          testName: {
-            type: "string",
-            description: "The name of the lab test as written in the document.",
-          },
-          date: {
-            type: "string",
-            description:
-              "The most accurate clinical date associated with this lab result, formatted as a strict ISO 8601 YYYY-MM-DD string.",
-          },
-          value: {
-            type: "string",
-            description: "The result value of the test.",
-          },
-          unit: {
-            type: "string",
-            description:
-              "The unit of measurement for the result. Empty string if not specified.",
-          },
-          isAbnormal: {
-            type: "boolean",
-            description:
-              "True if the lab value falls outside the normal/reference range, false otherwise. Evaluate the value against standard clinical reference ranges.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this lab result extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["testName", "date", "value", "unit", "isAbnormal", "confidence", "boundingBox"],
+      ["name", "date"],
+    ),
+    medications: citedArray(
+      "Medications and prescriptions explicitly documented.",
+      {
+        name: TEXT("Medication name."),
+        date: TEXT("Most accurate associated date in YYYY-MM-DD format, or 'Unknown'."),
+        dosage: TEXT("Dose and form; empty string when absent."),
+        frequency: TEXT("Administration frequency; empty string when absent."),
+        duration: TEXT("Documented treatment duration; empty string when absent."),
+        adherenceClues: TEXT("Only explicit adherence evidence such as missed doses, stopped, compliant, or not taking; empty string when absent."),
       },
-    },
-    allergies: {
-      type: "array",
-      description: "List of patient allergies found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          allergen: {
-            type: "string",
-            description: "The food or drug allergen.",
-          },
-          reaction: {
-            type: "string",
-            description: "The reaction experienced by the patient.",
-          },
-          severity: {
-            type: "string",
-            description: "The severity of the reaction.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this allergy extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
+      ["name", "date", "dosage", "frequency", "duration", "adherenceClues"],
+    ),
+    labResults: citedArray(
+      "Laboratory and pathology values.",
+      {
+        testName: TEXT("Test name."),
+        date: TEXT("Specimen/result date in YYYY-MM-DD format, or 'Unknown'."),
+        value: TEXT("Reported result value."),
+        unit: TEXT("Reported unit; empty string when absent."),
+        referenceRange: TEXT("Documented reference range; empty string when absent."),
+        isAbnormal: {
+          type: "boolean",
+          description: "True when marked abnormal or outside the documented reference range.",
         },
-        required: ["allergen", "reaction", "severity", "confidence", "boundingBox"],
       },
-    },
-    procedures: {
-      type: "array",
-      description: "List of medical procedures, surgeries, or imaging found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "The name of the procedure, surgery, or imaging.",
-          },
-          date: {
-            type: "string",
-            description: "The date of the procedure.",
-          },
-          body_part: {
-            type: "string",
-            description: "The body part the procedure applied to.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this procedure extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
+      ["testName", "date", "value", "unit", "referenceRange", "isAbnormal"],
+    ),
+    allergies: citedArray(
+      "Food, medication, environmental, and other allergies.",
+      {
+        allergen: TEXT("Allergen name."),
+        reaction: TEXT("Documented reaction; empty string when absent."),
+        severity: TEXT("Documented severity; empty string when absent."),
+      },
+      ["allergen", "reaction", "severity"],
+    ),
+    procedures: citedArray(
+      "Surgeries, procedures, interventions, and imaging examinations.",
+      {
+        name: TEXT("Procedure name."),
+        date: TEXT("Procedure date in YYYY-MM-DD format, or 'Unknown'."),
+        body_part: TEXT("Relevant body part; empty string when absent."),
+      },
+      ["name", "date", "body_part"],
+    ),
+    vitals: citedArray(
+      "Vital signs including BP, heart rate, temperature, respiratory rate, SpO2, height, and weight.",
+      {
+        measurement: TEXT("Vital measurement name."),
+        value: TEXT("Reported value."),
+        unit: TEXT("Reported unit; empty string when absent."),
+        date: TEXT("Measurement date in YYYY-MM-DD format, or 'Unknown'."),
+      },
+      ["measurement", "value", "unit", "date"],
+    ),
+    physicians: citedArray(
+      "Attending, referring, ordering, consulting, or signing clinicians.",
+      {
+        name: TEXT("Clinician name."),
+        role: TEXT("Role, department, or specialty; empty string when absent."),
+      },
+      ["name", "role"],
+    ),
+    icdCodes: citedArray(
+      "ICD-10 or ICD-9 codes explicitly present; do not invent codes.",
+      {
+        code: TEXT("Exact ICD code."),
+        description: TEXT("Documented code description; empty string when absent."),
+      },
+      ["code", "description"],
+    ),
+    cptCodes: citedArray(
+      "CPT or HCPCS procedure codes explicitly present; do not infer billing codes.",
+      {
+        code: TEXT("Exact CPT or HCPCS code."),
+        description: TEXT("Documented code description; empty string when absent."),
+      },
+      ["code", "description"],
+    ),
+    familyHistory: citedArray(
+      "Family medical history.",
+      {
+        condition: TEXT("Documented family condition."),
+        relative: TEXT("Affected relative; empty string when absent."),
+      },
+      ["condition", "relative"],
+    ),
+    socialHistory: citedArray(
+      "Smoking, alcohol, and substance-use history.",
+      {
+        category: {
+          type: "string",
+          enum: ["Smoking", "Alcohol", "Substance Use"],
+          description: "Social-history category.",
         },
-        required: ["name", "date", "body_part", "confidence", "boundingBox"],
+        status: TEXT("Current, former, never, occasional, or other documented status."),
+        details: TEXT("Quantity, duration, substance, or other details; empty string when absent."),
       },
-    },
-    vitals: {
-      type: "array",
-      description: "List of vital sign measurements found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          measurement: {
-            type: "string",
-            description:
-              "The name of the vital sign (e.g., Blood Pressure, Heart Rate, Temperature).",
-          },
-          value: {
-            type: "string",
-            description: "The recorded value of the vital sign.",
-          },
-          unit: {
-            type: "string",
-            description:
-              "The unit of measurement (e.g., mmHg, bpm, °F). Empty string if not specified.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this vital sign extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["measurement", "value", "unit", "confidence", "boundingBox"],
+      ["category", "status", "details"],
+    ),
+    imagingFindings: citedArray(
+      "Radiology and imaging findings or impressions.",
+      {
+        bodyPart: TEXT("Body part or study."),
+        finding: TEXT("Exact finding or impression."),
       },
-    },
-    physicians: {
-      type: "array",
-      description: "List of attending or referring physicians found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "The physician's full name.",
-          },
-          role: {
-            type: "string",
-            description:
-              "The physician's role or specialty (e.g., Attending, Cardiologist). Empty string if not specified.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this physician extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["name", "role", "confidence", "boundingBox"],
+      ["bodyPart", "finding"],
+    ),
+    pathologyFindings: citedArray(
+      "Pathology, histology, cytology, and biopsy findings.",
+      {
+        specimen: TEXT("Specimen or tissue; empty string when absent."),
+        finding: TEXT("Exact pathology finding."),
+        interpretation: TEXT("Documented interpretation, grade, stage, or impression; empty string when absent."),
       },
-    },
-    icdCodes: {
-      type: "array",
-      description: "List of ICD-10 (or ICD-9) codes found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          code: {
-            type: "string",
-            description: "The ICD code (e.g., E11.9, J06.9).",
-          },
-          description: {
-            type: "string",
-            description:
-              "The description or label associated with the ICD code.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description:
-              "Confidence level for this ICD code extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["code", "description", "confidence", "boundingBox"],
+      ["specimen", "finding", "interpretation"],
+    ),
+    symptoms: citedArray(
+      "Symptoms and their documented timeline.",
+      {
+        symptom: TEXT("Symptom name or description."),
+        onset: TEXT("Documented onset date or description; empty string when absent."),
+        duration: TEXT("Documented duration; empty string when absent."),
+        status: TEXT("Current, resolved, improving, worsening, intermittent, or other documented status."),
       },
-    },
-    familyHistory: {
-      type: "array",
-      description: "List of family medical history conditions found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          condition: {
-            type: "string",
-            description: "The medical condition that runs in the family.",
-          },
-          relative: {
-            type: "string",
-            description: "The relative who is affected by the condition (e.g., 'Father', 'Maternal Grandmother').",
-          },
-        },
-        required: ["condition", "relative"],
+      ["symptom", "onset", "duration", "status"],
+    ),
+    chronicDiseaseIndicators: citedArray(
+      "Explicit indicators that a condition is chronic, recurrent, long-standing, controlled, or uncontrolled.",
+      {
+        condition: TEXT("Condition name."),
+        indicator: TEXT("Exact chronicity evidence from the document."),
+        status: TEXT("Documented state such as active, controlled, uncontrolled, or history of."),
       },
-    },
-    socialHistory: {
-      type: "array",
-      description: "List of social history details for smoking and alcohol use.",
-      items: {
-        type: "object",
-        properties: {
-          category: {
-            type: "string",
-            enum: ["Smoking", "Alcohol"],
-            description: "The category of the social history item.",
-          },
-          status: {
-            type: "string",
-            description: "The current status (e.g., 'Current smoker', 'Former', 'Never', 'Occasional').",
-          },
-          details: {
-            type: "string",
-            description: "Any additional details provided (e.g., '1 pack/day for 20 years', '2 drinks/week'). Empty string if not specified.",
-          },
-        },
-        required: ["category", "status", "details"],
+      ["condition", "indicator", "status"],
+    ),
+    vaccinations: citedArray(
+      "Vaccination and immunization history.",
+      {
+        vaccine: TEXT("Vaccine or immunization name."),
+        date: TEXT("Administration date in YYYY-MM-DD format, or 'Unknown'."),
+        dose: TEXT("Dose number, manufacturer, or formulation; empty string when absent."),
       },
-    },
-    imagingFindings: {
-      type: "array",
-      description: "List of imaging and radiology findings found in the document.",
-      items: {
-        type: "object",
-        properties: {
-          bodyPart: {
-            type: "string",
-            description: "The body part examined.",
-          },
-          finding: {
-            type: "string",
-            description: "The finding or impression from the imaging report.",
-          },
-          confidence: {
-            type: "string",
-            enum: ["High", "Medium", "Low"],
-            description: "Confidence level for this imaging finding extraction.",
-          },
-          boundingBox: {
-            type: "array",
-            description:
-              "Spatial bounding box as [ymin, xmin, ymax, xmax] normalized to a 1000x1000 coordinate space.",
-            items: { type: "integer" },
-          },
-        },
-        required: ["bodyPart", "finding", "confidence", "boundingBox"],
+      ["vaccine", "date", "dose"],
+    ),
+    facilities: citedArray(
+      "Hospitals, clinics, laboratories, and departments associated with the encounter.",
+      {
+        hospitalName: TEXT("Facility or hospital name."),
+        department: TEXT("Department or service; empty string when absent."),
       },
-    },
+      ["hospitalName", "department"],
+    ),
+    insuranceDetails: citedArray(
+      "Insurance and policy identifiers explicitly printed in the document.",
+      {
+        provider: TEXT("Insurer or payer name; empty string when absent."),
+        policyNumber: TEXT("Policy number; empty string when absent."),
+        memberId: TEXT("Member, beneficiary, or subscriber ID; empty string when absent."),
+      },
+      ["provider", "policyNumber", "memberId"],
+    ),
+    emergencyContacts: citedArray(
+      "Emergency or next-of-kin contacts.",
+      {
+        name: TEXT("Contact name."),
+        relationship: TEXT("Relationship to patient; empty string when absent."),
+        phone: TEXT("Phone number exactly as printed; empty string when absent."),
+      },
+      ["name", "relationship", "phone"],
+    ),
+    followUpRecommendations: citedArray(
+      "Follow-up instructions and recommendations.",
+      {
+        recommendation: TEXT("Exact follow-up recommendation."),
+        timeframe: TEXT("Documented timing such as 2 weeks or as needed; empty string when absent."),
+      },
+      ["recommendation", "timeframe"],
+    ),
+    pregnancyStatus: citedArray(
+      "Pregnancy status and related gestational information when explicitly documented.",
+      {
+        status: TEXT("Pregnant, not pregnant, postpartum, unknown, or other exact documented status."),
+        gestationalAge: TEXT("Documented gestational age; empty string when absent."),
+        estimatedDueDate: TEXT("Estimated due date in YYYY-MM-DD format, or empty string when absent."),
+      },
+      ["status", "gestationalAge", "estimatedDueDate"],
+    ),
+    dischargeDetails: citedArray(
+      "Discharge diagnoses, disposition, and patient instructions.",
+      {
+        disposition: TEXT("Discharge disposition; empty string when absent."),
+        instructions: TEXT("Exact discharge instruction or restriction; empty string when absent."),
+        diagnosis: TEXT("Discharge diagnosis; empty string when absent."),
+      },
+      ["disposition", "instructions", "diagnosis"],
+    ),
+    referralRecommendations: citedArray(
+      "Recommendations or orders for referral to another clinician or service.",
+      {
+        specialty: TEXT("Target specialty or service; empty string when absent."),
+        reason: TEXT("Documented reason for referral."),
+        referredTo: TEXT("Named clinician or facility; empty string when absent."),
+      },
+      ["specialty", "reason", "referredTo"],
+    ),
   },
-  required: ["encounter_date", "diagnoses", "medications", "labResults", "allergies", "procedures", "vitals", "physicians", "icdCodes", "familyHistory", "socialHistory", "imagingFindings"],
+  required: [
+    "encounter_date",
+    "documentDates",
+    "diagnoses",
+    "medications",
+    "labResults",
+    "allergies",
+    "procedures",
+    "vitals",
+    "physicians",
+    "icdCodes",
+    "cptCodes",
+    "familyHistory",
+    "socialHistory",
+    "imagingFindings",
+    "pathologyFindings",
+    "symptoms",
+    "chronicDiseaseIndicators",
+    "vaccinations",
+    "facilities",
+    "insuranceDetails",
+    "emergencyContacts",
+    "followUpRecommendations",
+    "pregnancyStatus",
+    "dischargeDetails",
+    "referralRecommendations",
+  ],
 } as const;
 
 const PRECHECK_SCHEMA = {
@@ -584,36 +598,37 @@ function buildSystemInstruction(sex: string, bloodType: string, language: string
   return `You are a medical document analysis AI specializing in extracting structured clinical data from PDF documents.
 
 TASK:
-Analyze the provided PDF and extract all Tier 1 medical data: diagnoses, medications, lab results, allergies, procedures, vitals (e.g., blood pressure, heart rate, temperature), attending physicians (name and role/specialty), ICD-10 codes (code and description), family medical history, social history (smoking/alcohol), and imaging/radiology findings.
+Extract every explicitly documented Level 1 fact covered by the response schema: dates, diagnoses, medications, labs, allergies, procedures, vitals, clinicians, ICD/CPT codes, family and social history, imaging and pathology findings, symptoms, chronic-disease indicators, vaccinations, facilities, insurance, emergency contacts, follow-up recommendations, pregnancy status, discharge details, and referrals.
 
 BOUNDING BOX RULES:
 - For every extracted item that asks for a bounding box, provide the 2D spatial bounding box where that text appears in the document.
 - Bounding boxes use the format [ymin, xmin, ymax, xmax].
 - All coordinates are integers normalized to a 1000×1000 scale, where (0, 0) is the top-left corner and (1000, 1000) is the bottom-right corner.
 - The bounding box should tightly enclose the relevant text region.
+- sourcePage is the one-based PDF page containing that exact bounding box.
 
 EXTRACTION RULES:
-- Extract ONLY information that is explicitly present in the document. Do NOT hallucinate or infer data that is not written.
+- Extract ONLY information that is explicitly present in the document. Do NOT hallucinate, diagnose, invent codes, or infer facts that are not written.
 - Identify any patient allergies, specifically food or drug allergies, the reaction, and severity.
 - Identify past medical procedures, surgeries, or imaging (e.g., appendectomy, MRI).
 - Extract vital signs such as Blood Pressure, Heart Rate, Temperature, Respiratory Rate, SpO2, Weight, and Height. Include the measurement name, value, and unit.
 - Identify attending or referring physicians with their name and role or specialty.
 - Extract any ICD-10 (or ICD-9) codes along with their descriptions.
 - Extract family medical history: conditions that run in the patient's family and which relative is affected (e.g., "Father - diabetes", "Mother - breast cancer").
-- Extract social history for smoking and alcohol use. Record the category, current status (e.g., "Current smoker", "Former", "Never"), and any additional details (e.g., "1 pack/day for 20 years").
+- Extract social history for smoking, alcohol, and substance use. Record the category, current status, and explicit quantity or duration details.
 - Extract imaging and radiology findings including the body part examined, the finding/impression, and confidence level.
-- For lab results, explicitly evaluate the reported value against standard clinical reference ranges and set isAbnormal to true if the value falls outside normal limits, false otherwise. If no reference range is available, use standard medical reference ranges.
-- CRITICAL: The patient's biological sex is ${sex}, blood type is ${bloodType}, and primary language is ${language}. You MUST use this biological sex when evaluating lab result reference ranges to determine if the isAbnormal flag should be true or false. (e.g., Creatinine and Hemoglobin have different normal ranges for males vs. females). Use the primary language to assist with accurate translation if the document is not in English.
+- For lab results, prioritize the reference range and abnormal flag printed in the document. If a value is not marked and no reference range is printed, use established adult reference ranges cautiously and lower confidence when demographic context is insufficient.
+- The patient's biological sex is ${sex}, blood type is ${bloodType}, and primary language is ${language}. Use biological sex only when a clinical reference range genuinely depends on it.
 - If a category has no data in the document, return an empty array for that category.
 - For confidence: use "High" for clearly and unambiguously stated items, "Medium" for probable items, "Low" for ambiguous or partially legible items.
-- For dosage and frequency: use an empty string "" if the information is not specified in the document.
+- For dosage, frequency, medication duration, and adherence clues: use an empty string "" if the information is not explicitly specified.
 - For lab result units: use an empty string "" if not specified.
 - ENCOUNTER DATE: Actively search for the date of the medical encounter, visit, or when the document was created/authored. Look for headers like "Date of Visit", "Date of Service", "Report Date", "Encounter Date", "Date of Exam", or any document-level date. Return in YYYY-MM-DD format. If no date can be determined, return "Unknown".
 
-CRITICAL TEMPORAL DIRECTIVE: For every Diagnosis, Medication, and Lab result you extract, you MUST determine the most accurate clinical date associated with it.
+TEMPORAL DIRECTIVE: For dated items, use the most accurate explicitly associated clinical date.
 - Look for specific dates next to the item (e.g., a lab draw date).
-- If a specific item date is missing, infer the date from the document's primary metadata (e.g., 'Date Discharged', 'Encounter Date', or 'Date Admitted').
-- ALWAYS format the extracted date as a strict ISO 8601 YYYY-MM-DD string (e.g., '2026-05-18').
+- If a specific item date is missing, use the document encounter date only when the item clearly belongs to that encounter; otherwise return "Unknown".
+- Format known dates as strict ISO 8601 YYYY-MM-DD strings.
 
 OUTPUT:
 Return ONLY the structured JSON object. No explanations, no markdown, no commentary.`;
@@ -859,7 +874,7 @@ Analyze the document before extraction and return the structured precheck JSON o
               },
             },
             {
-              text: "Extract all diagnoses, medications, lab results, allergies, procedures, vitals, attending physicians, and ICD-10 codes from this medical document. Include the spatial bounding box and confidence for each extracted item.",
+              text: "Perform the complete Level 1 extraction defined by the response schema. Return every explicitly documented fact with confidence, sourcePage, and a tight normalized boundingBox. Return empty arrays for absent categories.",
             },
           ],
         },
@@ -900,6 +915,7 @@ Analyze the document before extraction and return the structured precheck JSON o
     // Ensure all expected arrays exist (defensive)
     const data: GeminiExtractionResult = {
       encounter_date: typeof parsed.encounter_date === "string" ? parsed.encounter_date : "Unknown",
+      documentDates: Array.isArray(parsed.documentDates) ? parsed.documentDates : [],
       diagnoses: Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
       medications: Array.isArray(parsed.medications) ? parsed.medications : [],
       labResults: Array.isArray(parsed.labResults) ? parsed.labResults : [],
@@ -908,14 +924,27 @@ Analyze the document before extraction and return the structured precheck JSON o
       vitals: Array.isArray(parsed.vitals) ? parsed.vitals : [],
       physicians: Array.isArray(parsed.physicians) ? parsed.physicians : [],
       icdCodes: Array.isArray(parsed.icdCodes) ? parsed.icdCodes : [],
+      cptCodes: Array.isArray(parsed.cptCodes) ? parsed.cptCodes : [],
       familyHistory: Array.isArray(parsed.familyHistory) ? parsed.familyHistory : [],
       socialHistory: Array.isArray(parsed.socialHistory) ? parsed.socialHistory : [],
       imagingFindings: Array.isArray(parsed.imagingFindings) ? parsed.imagingFindings : [],
+      pathologyFindings: Array.isArray(parsed.pathologyFindings) ? parsed.pathologyFindings : [],
+      symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms : [],
+      chronicDiseaseIndicators: Array.isArray(parsed.chronicDiseaseIndicators) ? parsed.chronicDiseaseIndicators : [],
+      vaccinations: Array.isArray(parsed.vaccinations) ? parsed.vaccinations : [],
+      facilities: Array.isArray(parsed.facilities) ? parsed.facilities : [],
+      insuranceDetails: Array.isArray(parsed.insuranceDetails) ? parsed.insuranceDetails : [],
+      emergencyContacts: Array.isArray(parsed.emergencyContacts) ? parsed.emergencyContacts : [],
+      followUpRecommendations: Array.isArray(parsed.followUpRecommendations) ? parsed.followUpRecommendations : [],
+      pregnancyStatus: Array.isArray(parsed.pregnancyStatus) ? parsed.pregnancyStatus : [],
+      dischargeDetails: Array.isArray(parsed.dischargeDetails) ? parsed.dischargeDetails : [],
+      referralRecommendations: Array.isArray(parsed.referralRecommendations) ? parsed.referralRecommendations : [],
     };
 
-    // Clamp bounding box values to valid 0–1000 range
+    // Normalize all citation metadata before it is persisted or rendered.
     const clampBox = (box: number[]): [number, number, number, number] => {
-      const clamp = (v: number) => Math.max(0, Math.min(1000, Math.round(v)));
+      const clamp = (value: number) =>
+        Math.max(0, Math.min(1000, Math.round(Number(value) || 0)));
       return [
         clamp(box[0] ?? 0),
         clamp(box[1] ?? 0),
@@ -924,32 +953,40 @@ Analyze the document before extraction and return the structured precheck JSON o
       ];
     };
 
-    for (const d of data.diagnoses) {
-      d.boundingBox = clampBox(d.boundingBox);
-    }
-    for (const m of data.medications) {
-      m.boundingBox = clampBox(m.boundingBox);
-    }
-    for (const l of data.labResults) {
-      l.boundingBox = clampBox(l.boundingBox);
-    }
-    for (const a of data.allergies) {
-      a.boundingBox = clampBox(a.boundingBox);
-    }
-    for (const p of data.procedures) {
-      p.boundingBox = clampBox(p.boundingBox);
-    }
-    for (const v of data.vitals) {
-      v.boundingBox = clampBox(v.boundingBox);
-    }
-    for (const ph of data.physicians) {
-      ph.boundingBox = clampBox(ph.boundingBox);
-    }
-    for (const ic of data.icdCodes) {
-      ic.boundingBox = clampBox(ic.boundingBox);
-    }
-    for (const img of data.imagingFindings) {
-      img.boundingBox = clampBox(img.boundingBox);
+    const citedCollections: CitationMetadata[][] = [
+      data.documentDates,
+      data.diagnoses,
+      data.medications,
+      data.labResults,
+      data.allergies,
+      data.procedures,
+      data.vitals,
+      data.physicians,
+      data.icdCodes,
+      data.cptCodes,
+      data.familyHistory,
+      data.socialHistory,
+      data.imagingFindings,
+      data.pathologyFindings,
+      data.symptoms,
+      data.chronicDiseaseIndicators,
+      data.vaccinations,
+      data.facilities,
+      data.insuranceDetails,
+      data.emergencyContacts,
+      data.followUpRecommendations,
+      data.pregnancyStatus,
+      data.dischargeDetails,
+      data.referralRecommendations,
+    ];
+
+    for (const collection of citedCollections) {
+      for (const item of collection) {
+        item.boundingBox = clampBox(
+          Array.isArray(item.boundingBox) ? item.boundingBox : [],
+        );
+        item.sourcePage = Math.max(1, Math.round(Number(item.sourcePage) || 1));
+      }
     }
 
     let safetyAlerts: SafetyAlerts | undefined = undefined;

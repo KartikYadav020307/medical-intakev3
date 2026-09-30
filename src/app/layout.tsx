@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Manrope, Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
+import "./experience.css";
+import ExperienceProvider from "@/components/ExperienceProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,15 +21,10 @@ const manrope = Manrope({
   weight: ["400", "500", "600", "700", "800"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   title: "LOCUS | Clinical Intelligence",
-  description: "Precision Medical Intake & Coordinate-Mapped Extraction",
+  description: "Bring your medical records together. Understand your health history, review extracted findings, and trace every detail to its source.",
 };
 
 export default function RootLayout({
@@ -38,10 +35,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${inter.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning><ExperienceProvider>{children}</ExperienceProvider></body>
     </html>
   );
 }

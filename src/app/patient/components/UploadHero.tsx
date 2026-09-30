@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Plus, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowUpRight, FileUp, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
-import { Button } from "@/components/ui/button";
 
 async function generateFileHash(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
@@ -28,12 +27,23 @@ interface UploadHeroProps {
 
 export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const uploadLock = useRef(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (file: File) => {
-    if (isUploading) return;
+    if (uploadLock.current) return;
+    if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
+      setUploadError("Choose a PDF document to continue.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError("This PDF is larger than 20 MB. Please choose a smaller file.");
+      return;
+    }
+    uploadLock.current = true;
 
     setIsUploading(true);
     setUploadedFileName(null);
@@ -89,6 +99,7 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
       setUploadError(msg);
       setUploadedFileName(null);
     } finally {
+      uploadLock.current = false;
       setIsUploading(false);
     }
   };
@@ -109,56 +120,19 @@ export default function UploadHero({ onUploadComplete }: UploadHeroProps) {
         ? `${uploadedFileName} uploaded. Analyzing document.`
         : null;
 
-  const statusClass = uploadError
-    ? "text-red-600"
-    : uploadedFileName
-      ? "text-emerald-600"
-      : "text-slate-500";
-
   return (
-    <motion.div
-      initial={{ y: 12, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, delay: 0.15 }}
-      className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3"
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFileUpload(file);
-          e.target.value = "";
-        }}
-      />
-
-      <Button
-        type="button"
-        size="icon-lg"
-        aria-label="Upload medical record"
-        onClick={() => !isUploading && fileInputRef.current?.click()}
-        disabled={isUploading}
-        className="h-14 w-14 rounded-full bg-primary text-white shadow-2xl shadow-blue-700/30 transition-transform hover:scale-105 hover:bg-primary active:scale-95 disabled:opacity-80"
-      >
-        {isUploading ? (
-          <Loader2 className="w-6 h-6 animate-spin text-white" />
-        ) : (
-          <Plus className="w-6 h-6 text-white" />
-        )}
-      </Button>
-
-      {statusText && (
-        <div className={`flex max-w-xs items-center gap-1.5 rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-right text-xs font-medium shadow-lg backdrop-blur ${statusClass}`}>
-          {StatusIcon && (
-            <StatusIcon
-              className={`w-3.5 h-3.5 shrink-0 ${isUploading ? "animate-spin" : ""}`}
-            />
-          )}
-          <span className="truncate">{statusText}</span>
-        </div>
-      )}
-    </motion.div>
+    <motion.section initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="workspace-upload" aria-label="Upload a medical record">
+      <div className="upload-copy"><p className="eyebrow">A place for every part of your story</p><h3>Your next record.<br />A clearer picture.</h3><p>Add a report, prescription, or discharge note. We’ll help you find the details that matter.</p></div>
+      <div className={`upload-dropzone ${isDragging ? "is-dragging" : ""}`}
+        onDragOver={(event) => { event.preventDefault(); if (!isUploading) setIsDragging(true); }}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDragging(false); }}
+        onDrop={(event) => { event.preventDefault(); setIsDragging(false); const file = event.dataTransfer.files[0]; if (file) void handleFileUpload(file); }}>
+        <FileUp size={28} strokeWidth={1.3} aria-hidden="true" />
+        <p>Drop your medical PDF here</p><small>PDF documents · Up to 20 MB</small>
+        <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden" aria-label="Choose medical PDF" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleFileUpload(file); event.target.value = ""; }} />
+        <button type="button" className="button-lime" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>{isUploading ? <><Loader2 size={16} className="animate-spin" /> Uploading</> : <>Choose a document <ArrowUpRight size={16} /></>}</button>
+      </div>
+      {statusText && <div role={uploadError ? "alert" : "status"} className={`upload-status ${uploadError ? "is-error" : uploadedFileName ? "is-success" : ""}`}>{StatusIcon && <StatusIcon size={16} className={isUploading ? "animate-spin" : ""} />}<span>{statusText}</span></div>}
+    </motion.section>
   );
 }

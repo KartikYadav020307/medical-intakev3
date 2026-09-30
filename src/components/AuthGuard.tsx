@@ -1,5 +1,6 @@
 "use client";
 
+import Brand from "./Brand";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
@@ -52,14 +53,7 @@ export default function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-body">
-        <div className="flex flex-col items-center gap-5">
-          <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-sm" />
-          <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">
-            Securing Connection...
-          </p>
-        </div>
-      </div>
+      <div className="session-loading" role="status"><Brand /><div className="loading-line" aria-hidden="true" /><p>Opening your workspace…</p></div>
     );
   }
 

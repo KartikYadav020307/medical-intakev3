@@ -15,8 +15,9 @@ interface CitationModalProps {
   onClose: () => void;
   pdfUrl: string | null;
   activeHighlight: [number, number, number, number] | null;
+  activeSourcePage?: number;
   extractionData: ExtractionData | null;
-  onItemClick: (boundingBox: [number, number, number, number] | null) => void;
+  onItemClick: (boundingBox: [number, number, number, number] | null, sourcePage?: number) => void;
 }
 
 export default function CitationModal({
@@ -24,6 +25,7 @@ export default function CitationModal({
   onClose,
   pdfUrl,
   activeHighlight,
+  activeSourcePage,
   extractionData,
   onItemClick,
 }: CitationModalProps) {
@@ -46,6 +48,7 @@ export default function CitationModal({
           <PdfViewer
             pdfUrl={pdfUrl}
             activeHighlight={activeHighlight}
+            activePage={activeSourcePage}
             onClearHighlight={() => onItemClick(null)}
             headerActions={
               <button

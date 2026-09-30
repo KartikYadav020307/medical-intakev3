@@ -9,8 +9,8 @@
   --color-foreground: var(--foreground);
 
   /* === Stitch Design System — Medical Palette === */
-  --color-surface-bright: #faf8ff;
-  --color-surface: #faf8ff;
+  --color-surface-bright: #f7f9f6;
+  --color-surface: #f3f5f2;
   --color-surface-dim: #d9d9e4;
   --color-surface-variant: #e1e2ec;
   --color-surface-container-lowest: #ffffff;
@@ -19,8 +19,8 @@
   --color-surface-container-high: #e7e7f2;
   --color-surface-container-highest: #e1e2ec;
 
-  --color-primary: #003d9b;
-  --color-primary-container: #0052cc;
+  --color-primary: #285d79;
+  --color-primary-container: #345c78;
   --color-primary-fixed: #dae2ff;
   --color-primary-fixed-dim: #b2c5ff;
   --color-on-primary: #ffffff;
@@ -63,10 +63,10 @@
   --color-unstructured-gray: #f4f5f7;
 
   /* === Typography === */
-  --font-sans: var(--font-sans);
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-headline: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-headline: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

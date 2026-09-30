@@ -26,7 +26,7 @@ export default function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[90vw] sm:max-w-2xl overflow-y-auto z-50 p-0 flex flex-col gap-0 border-l border-slate-200 shadow-2xl">
+      <SheetContent side="right" className="help-center-sheet w-[94vw] sm:max-w-2xl overflow-hidden z-50 p-0 flex flex-col gap-0 border-l shadow-2xl">
         
         <SheetHeader className="p-8 border-b border-slate-200 shrink-0 bg-slate-50/80 backdrop-blur-sm">
           <SheetTitle className="text-2xl font-bold tracking-tight text-slate-900">LOCUS Help Center</SheetTitle>
@@ -37,9 +37,9 @@ export default function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetP
           </div>
         </SheetHeader>
 
-        <div className="flex flex-col flex-1 min-h-0 bg-white">
+        <div className="flex flex-col flex-1 min-h-0 bg-white overflow-hidden">
           {/* Top Section - Interactive Timeline */}
-          <div className="w-full shrink-0 border-b border-slate-200/60 p-8 bg-slate-50/30">
+          <div className="help-example-panel w-full shrink-0 border-b p-8 overflow-y-auto">
             <h3 className="text-xs font-bold text-slate-500 mb-6 uppercase tracking-widest">Example Extraction</h3>
             <MedicalTimeline 
               data={extractionData} 
@@ -48,8 +48,8 @@ export default function HelpCenterSheet({ open, onOpenChange }: HelpCenterSheetP
           </div>
 
           {/* Bottom Section - PDF Viewer */}
-          <div className="w-full flex-1 relative bg-slate-100/50 min-h-[500px]">
-            {pdfUrl && (
+          <div className="help-document-panel w-full flex-1 relative min-h-[360px] overflow-hidden">
+            {open && pdfUrl && (
               <PdfViewer
                 pdfUrl={pdfUrl}
                 activeHighlight={activeHighlight}

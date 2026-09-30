@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { motion } from "motion/react";
-import { Loader2, AlertCircle, X, FileText } from "lucide-react";
+import { Loader2, AlertCircle, X, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -18,6 +18,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 interface PdfViewerProps {
   pdfUrl: string;
   activeHighlight: [number, number, number, number] | null;
+  activePage?: number;
   onClearHighlight: () => void;
   headerActions?: ReactNode;
 }
@@ -29,20 +30,26 @@ interface PdfViewerProps {
 export default function PdfViewer({
   pdfUrl,
   activeHighlight,
+  activePage = 1,
   onClearHighlight,
   headerActions,
 }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
-  const [containerWidth, setContainerWidth] = useState<number>(800);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(Math.max(1, Math.round(activePage || 1)));
+  }, [activePage]);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
       if (entries[0]) {
-        // Adjust for padding (px-8 = 32px on both sides = 64px) or just take raw width
-        // and cap it slightly so it looks good embedded
-        setContainerWidth(
-          Math.min(800, entries[0].contentRect.width)
+        const nextWidth = Math.floor(entries[0].contentRect.width);
+        setContainerWidth((previousWidth) =>
+          previousWidth === nextWidth ? previousWidth : nextWidth,
         );
       }
     });
@@ -71,9 +78,29 @@ export default function PdfViewer({
         </div>
         <div className="flex flex-row items-center gap-4 shrink-0">
           {numPages > 0 && (
-            <span className="text-citation-code text-on-surface-variant">
-              Page 1 of {numPages}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Previous page"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                className="rounded-md p-1 text-on-surface-variant hover:bg-surface-variant disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-citation-code text-on-surface-variant">
+                Page {Math.min(currentPage, numPages)} of {numPages}
+              </span>
+              <button
+                type="button"
+                aria-label="Next page"
+                disabled={currentPage >= numPages}
+                onClick={() => setCurrentPage((page) => Math.min(numPages, page + 1))}
+                className="rounded-md p-1 text-on-surface-variant hover:bg-surface-variant disabled:opacity-30"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           )}
           {activeHighlight && (
             <button
@@ -91,7 +118,7 @@ export default function PdfViewer({
       {/* PDF Container */}
       <div 
         ref={containerRef}
-        className="flex-1 w-full h-full overflow-auto flex justify-center bg-gray-100 pt-20 pb-12 px-8"
+        className="flex-1 w-full min-h-0 overflow-auto flex justify-center bg-gray-100 pt-20 pb-12 px-8"
       >
         <Document
           file={`/api/proxy-pdf?url=${encodeURIComponent(
@@ -109,7 +136,10 @@ export default function PdfViewer({
               })()
             )
           )}`}
-          onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+          onLoadSuccess={({ numPages: n }) => {
+            setNumPages(n);
+            setCurrentPage((page) => Math.min(Math.max(1, page), n));
+          }}
           loading={
             <div className="flex items-center gap-2 mt-20 text-on-surface-variant">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -125,18 +155,19 @@ export default function PdfViewer({
             </div>
           }
         >
-          {/* Wrapper with relative positioning for overlay alignment */}
-          <div className="relative inline-block shadow-2xl bg-white border border-document-border tour-pdf-viewer">
-            <Page
-              pageNumber={1}
-              width={containerWidth} // Dynamic responsive width
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-            />
+          {/* Wait for a stable measured viewport before rendering PDF.js. */}
+          {containerWidth > 0 && (
+            <div className="relative inline-block shadow-2xl bg-white border border-document-border tour-pdf-viewer">
+              <Page
+                pageNumber={Math.min(currentPage, Math.max(numPages, 1))}
+                width={Math.min(800, containerWidth)}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+              />
 
             {/* ── Bounding Box Highlight Overlay ── */}
-            {activeHighlight && (
-              <div
+              {activeHighlight && (
+                <div
                 className="absolute bg-yellow-300 opacity-50 mix-blend-multiply border border-yellow-500 rounded z-50 pointer-events-none transition-all duration-300"
                 style={{
                   top: `${(activeHighlight[0] / 1000) * 100}%`,
@@ -144,9 +175,10 @@ export default function PdfViewer({
                   width: `${((activeHighlight[3] - activeHighlight[1]) / 1000) * 100}%`,
                   height: `${((activeHighlight[2] - activeHighlight[0]) / 1000) * 100}%`,
                 }}
-              />
-            )}
-          </div>
+                />
+              )}
+            </div>
+          )}
         </Document>
       </div>
     </motion.div>

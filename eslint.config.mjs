@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "public/**",
+    // Ignore the user's nested backup/duplicate project.
+    "medical-intakev3/**",
   ]),
 ]);
 

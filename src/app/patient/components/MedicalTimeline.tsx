@@ -22,11 +22,12 @@ interface TimelineEntry {
   detail?: string;
   badge?: { text: string; className: string };
   boundingBox: BoundingBox;
+  sourcePage: number;
 }
 
 interface MedicalTimelineProps {
   data: ExtractionData;
-  onItemClick: (boundingBox: BoundingBox) => void;
+  onItemClick: (boundingBox: BoundingBox, sourcePage?: number) => void;
   showHeader?: boolean;
 }
 
@@ -74,6 +75,7 @@ function buildTimeline(data: ExtractionData): TimelineEntry[] {
       label: d.name,
       badge: { text: d.confidence, className: confidenceClass(d.confidence) },
       boundingBox: d.boundingBox,
+      sourcePage: d.sourcePage ?? 1,
     });
   });
 
@@ -85,6 +87,7 @@ function buildTimeline(data: ExtractionData): TimelineEntry[] {
       label: m.name,
       detail: parts.length > 0 ? parts.join(" · ") : undefined,
       boundingBox: m.boundingBox,
+      sourcePage: m.sourcePage ?? 1,
     });
   });
 
@@ -95,6 +98,7 @@ function buildTimeline(data: ExtractionData): TimelineEntry[] {
       label: l.testName,
       detail: `${l.value}${l.unit ? ` ${l.unit}` : ""}`,
       boundingBox: l.boundingBox,
+      sourcePage: l.sourcePage ?? 1,
     });
   });
 
@@ -147,7 +151,7 @@ export default function MedicalTimeline({
                 initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.05 * i, duration: 0.3 }}
-                onClick={() => onItemClick(entry.boundingBox)}
+                onClick={() => onItemClick(entry.boundingBox, entry.sourcePage)}
                 className={`group relative flex items-center gap-4 w-full text-left px-4 py-3 rounded-xl border border-document-border bg-surface transition-all duration-200 cursor-pointer active:scale-[0.995] hover:bg-surface-container-low ${meta.hoverBorder} ${i === 0 ? "tour-timeline-card" : ""}`}
               >
                 {/* Dot on the timeline line */}

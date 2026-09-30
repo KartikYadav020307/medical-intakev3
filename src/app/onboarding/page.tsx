@@ -4,13 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import Image from "next/image";
+import Brand from "@/components/Brand";
 import {
   BriefcaseMedical,
   Camera,
   CheckCircle2,
   CloudUpload,
-  Dna,
-  FileUp,
   Heart,
   Loader2,
   Shield,
@@ -108,7 +107,7 @@ function DoctorOnboardingForm({
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-600 font-display selection:bg-indigo-500/20">
+    <div className="onboarding-shell min-h-screen flex font-display">
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
         <div className="w-[900px] h-[900px] bg-gradient-to-tr from-indigo-500/15 via-teal-400/10 to-transparent rounded-full blur-[140px]" />
         <div
@@ -129,20 +128,16 @@ function DoctorOnboardingForm({
           className="mb-10 text-center"
         >
           <div className="mb-4 flex items-center justify-center gap-3">
-            <Dna className="h-8 w-8 text-indigo-600" />
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              Medical<span className="text-indigo-600">.Intake</span>
-            </span>
+            <Brand />
           </div>
           <h1 className="mb-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Set Up Your{" "}
+            Set up your{" "}
             <span className="bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">
-              Clinical Workspace
+              clinical workspace
             </span>
           </h1>
           <p className="mx-auto max-w-md text-sm text-muted-foreground font-sans">
-            Verify your professional details so your clinic can securely manage
-            patient records.
+            Add your professional details to prepare your clinic workspace.
           </p>
         </motion.div>
 
@@ -157,8 +152,8 @@ function DoctorOnboardingForm({
           <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
             <div>
               <div className="mb-5 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50">
-                  <BriefcaseMedical className="h-4.5 w-4.5 text-indigo-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+                  <BriefcaseMedical className="h-4.5 w-4.5 text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   Professional Identity
@@ -190,7 +185,7 @@ function DoctorOnboardingForm({
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
                     className={inputClass}
-                    placeholder="Dr. Jane Doe"
+                    placeholder="Your full name"
                   />
                 </div>
 
@@ -229,8 +224,8 @@ function DoctorOnboardingForm({
 
             <div>
               <div className="mb-5 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-100 bg-teal-50">
-                  <CloudUpload className="h-4.5 w-4.5 text-teal-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+                  <CloudUpload className="h-4.5 w-4.5 text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   Professional Credential
@@ -246,7 +241,7 @@ function DoctorOnboardingForm({
                 className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-5 py-10 text-center transition-colors hover:border-indigo-300 hover:bg-slate-50"
               >
                 <CloudUpload className="h-9 w-9 text-indigo-500" />
-                <span className="mt-4 text-sm font-semibold text-indigo-600">
+                <span className="mt-4 text-sm font-semibold text-primary">
                   {credentialFile ? "Replace credential" : "Upload credential"}
                 </span>
                 <span className="mt-1 text-sm text-muted-foreground">
@@ -278,7 +273,7 @@ function DoctorOnboardingForm({
                   required
                   checked={termsAccepted}
                   onChange={(event) => setTermsAccepted(event.target.checked)}
-                  className="mt-0.5 h-4.5 w-4.5 shrink-0 cursor-pointer rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="mt-0.5 h-4.5 w-4.5 shrink-0 cursor-pointer rounded border-slate-300 text-primary focus:ring-indigo-500"
                 />
                 <label
                   htmlFor="doctor-terms"
@@ -297,8 +292,8 @@ function DoctorOnboardingForm({
                 </label>
               </div>
 
-              <div className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 text-sm text-muted-foreground">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" />
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-muted-foreground">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                 <p>
                   Your credential will be reviewed by an administrator before
                   physician verification is granted.
@@ -324,7 +319,7 @@ function DoctorOnboardingForm({
                     Securing Credentials...
                   </>
                 ) : (
-                  "Complete Doctor Onboarding"
+                  "Open your clinical workspace"
                 )}
               </span>
             </button>
@@ -334,7 +329,7 @@ function DoctorOnboardingForm({
         <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <span>
             STATUS:{" "}
-            <span className="font-semibold uppercase text-teal-600">Secure</span>
+            <span className="font-semibold uppercase text-primary">Secure</span>
           </span>
           <span className="text-slate-300">·</span>
           <span>Credential review required</span>
@@ -512,7 +507,7 @@ export default function OnboardingPage() {
   const sectionDelay = 0.15;
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-600 font-display selection:bg-indigo-500/20">
+    <div className="onboarding-shell min-h-screen flex font-display">
       {/* ── Background effects ─────────────────────────────────────── */}
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
         <div className="w-[900px] h-[900px] bg-gradient-to-tr from-indigo-500/15 via-teal-400/10 to-transparent rounded-full blur-[140px]" />
@@ -535,20 +530,16 @@ export default function OnboardingPage() {
           className="text-center mb-10"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Dna className="w-8 h-8 text-indigo-600" />
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              Medical<span className="text-indigo-600">.Intake</span>
-            </span>
+            <Brand />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 mb-3">
-            Complete Your{" "}
+            Your story starts with{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-teal-500">
-              Clinical Profile
+              you
             </span>
           </h1>
           <p className="text-base text-slate-500 font-sans max-w-md mx-auto">
-            Provide your baseline information so we can securely manage your
-            medical records and deliver personalized insights.
+            Add your details to help match documents to your profile.
           </p>
         </motion.div>
 
@@ -557,7 +548,7 @@ export default function OnboardingPage() {
           initial={{ opacity: 0, y: 25 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="w-full p-8 sm:p-10 bg-white/70 backdrop-blur-xl border border-slate-200 shadow-2xl shadow-indigo-100/50 rounded-3xl relative overflow-hidden group"
+          className="w-full p-8 sm:p-10 bg-white/70 backdrop-blur-xl border border-slate-200 shadow-xl shadow-slate-200/30 rounded-xl relative overflow-hidden group"
         >
           {/* Ambient hover glow */}
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -570,8 +561,8 @@ export default function OnboardingPage() {
               transition={{ duration: 0.5, delay: sectionDelay * 1 }}
             >
               <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center border border-indigo-100">
-                  <UserCircle className="w-4.5 h-4.5 text-indigo-600" />
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200">
+                  <UserCircle className="w-4.5 h-4.5 text-primary" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   Identity
@@ -657,8 +648,8 @@ export default function OnboardingPage() {
               transition={{ duration: 0.5, delay: sectionDelay * 2 }}
             >
               <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center border border-teal-100">
-                  <Heart className="w-4.5 h-4.5 text-teal-600" />
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200">
+                  <Heart className="w-4.5 h-4.5 text-primary" />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   Medical Profile
@@ -762,7 +753,7 @@ export default function OnboardingPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="relative w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden hover:border-indigo-400 hover:bg-indigo-50/50 transition-all cursor-pointer shrink-0 group/avatar"
+                    className="relative w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden hover:border-indigo-400 hover:bg-slate-50/50 transition-all cursor-pointer shrink-0 group/avatar"
                   >
                     {avatarPreview ? (
                       <Image
@@ -779,7 +770,7 @@ export default function OnboardingPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors cursor-pointer"
+                      className="text-sm font-semibold text-primary hover:text-indigo-700 transition-colors cursor-pointer"
                     >
                       {avatarPreview ? "Change photo" : "Upload a photo"}
                     </button>
@@ -805,7 +796,7 @@ export default function OnboardingPage() {
                   type="checkbox"
                   checked={consentGiven}
                   onChange={(e) => setConsentGiven(e.target.checked)}
-                  className="mt-0.5 w-4.5 h-4.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                  className="mt-0.5 w-4.5 h-4.5 rounded border-slate-300 text-primary focus:ring-indigo-500 cursor-pointer shrink-0"
                 />
                 <label
                   htmlFor="onboarding-consent"
@@ -869,7 +860,7 @@ export default function OnboardingPage() {
         >
           <span>
             STATUS:{" "}
-            <span className="text-teal-600 uppercase font-semibold">
+            <span className="text-primary uppercase font-semibold">
               Secure
             </span>
           </span>

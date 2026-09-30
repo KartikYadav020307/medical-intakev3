@@ -104,38 +104,35 @@ export default function ShareLinkModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+      <div className="share-summary-backdrop fixed inset-0 z-50 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", stiffness: 400, damping: 35 }}
-          className="relative w-full max-w-md mx-4 overflow-hidden rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]"
+          className="share-summary-dialog relative w-full max-w-md mx-4 overflow-hidden"
         >
-          {/* Glass gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-purple-50/30 pointer-events-none" />
-
-          {/* Content */}
-          <div className="relative p-8">
+          <div className="relative p-7 sm:p-8">
             {/* Close button */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="share-summary-close absolute top-4 right-4"
             >
               <X className="w-4 h-4" />
             </button>
 
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <div className="share-summary-mark">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                  Share Medical Summary
+                <p className="share-summary-kicker">A private link</p>
+                <h2 className="share-summary-title">
+                  Share your summary
                 </h2>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  Generate a secure, time-limited link
+                <p className="share-summary-subtitle">
+                  Choose how long it stays available.
                 </p>
               </div>
             </div>
@@ -144,19 +141,19 @@ export default function ShareLinkModal({
               <>
                 {/* Duration selector */}
                 <div className="mb-6">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">
-                    <Clock className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
-                    How long should this link be active?
+                  <label className="share-summary-label">
+                    <Clock className="w-3.5 h-3.5" />
+                    Availability
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="share-duration-grid">
                     {DURATION_OPTIONS.map((option) => (
                       <button
                         key={option.hours}
                         onClick={() => setSelectedDuration(option)}
-                        className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer border ${
+                        className={`share-duration ${
                           selectedDuration.hours === option.hours
-                            ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/25 scale-[1.02]"
-                            : "bg-white/60 text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"
+                            ? "is-selected"
+                            : ""
                         }`}
                       >
                         {option.label}
@@ -166,11 +163,10 @@ export default function ShareLinkModal({
                 </div>
 
                 {/* Security notice */}
-                <div className="bg-slate-50/80 rounded-xl p-4 mb-6 border border-slate-100">
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    <span className="font-semibold text-slate-600">
-                      🔒 Secure by design:
-                    </span>{" "}
+                <div className="share-security-note">
+                  <Shield className="share-security-icon" aria-hidden="true" />
+                  <p>
+                    <span>Private by design.</span>{" "}
                     The link uses a 128-bit cryptographic ID and automatically
                     expires after{" "}
                     <span className="font-semibold text-slate-700">
@@ -184,7 +180,7 @@ export default function ShareLinkModal({
                 <button
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                  className="share-summary-primary w-full"
                 >
                   {isGenerating ? (
                     <>
@@ -208,23 +204,23 @@ export default function ShareLinkModal({
               >
                 {/* Success icon */}
                 <div className="flex justify-center mb-5">
-                  <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
-                    <Check className="w-8 h-8 text-emerald-600" />
+                  <div className="share-summary-success-mark">
+                    <Check className="w-7 h-7" />
                   </div>
                 </div>
 
-                <p className="text-center text-sm font-semibold text-emerald-700 mb-4">
-                  Link generated & copied to clipboard!
+                <p className="share-summary-success-copy">
+                  Link copied to your clipboard
                 </p>
 
                 {/* URL display */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2 mb-4">
-                  <code className="text-xs text-slate-600 truncate flex-1 font-mono">
+                <div className="share-summary-url">
+                  <code>
                     {generatedUrl}
                   </code>
                   <button
                     onClick={handleCopyAgain}
-                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+                    className="share-summary-copy"
                     title="Copy again"
                   >
                     {copied ? (
@@ -235,7 +231,7 @@ export default function ShareLinkModal({
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-400 text-center mb-5">
+                <p className="share-summary-expiry">
                   Expires in{" "}
                   <span className="font-semibold text-slate-600">
                     {selectedDuration.label.toLowerCase()}
@@ -244,7 +240,7 @@ export default function ShareLinkModal({
 
                 <button
                   onClick={handleClose}
-                  className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-200 transition-colors cursor-pointer border border-slate-200"
+                  className="share-summary-secondary w-full"
                 >
                   Done
                 </button>

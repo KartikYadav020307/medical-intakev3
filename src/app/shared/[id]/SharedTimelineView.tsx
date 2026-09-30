@@ -73,6 +73,7 @@ export default function SharedTimelineView({
   const [activeHighlight, setActiveHighlight] = useState<
     [number, number, number, number] | null
   >(null);
+  const [activeSourcePage, setActiveSourcePage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecordIndex, setSelectedRecordIndex] = useState(0);
 
@@ -117,26 +118,6 @@ export default function SharedTimelineView({
           rawDate: clinicalDate ? dateSource.toISOString() : record.created_at,
         };
       };
-
-      // Prioritize AI-extracted encounter date, fallback to upload date
-      const encounterDate = data?.encounter_date;
-      const hasValidEncounterDate = encounterDate && encounterDate !== "Unknown";
-
-      const dateSource = hasValidEncounterDate
-        ? new Date(encounterDate)
-        : new Date(record.created_at);
-
-      const date = dateSource.toLocaleDateString("en-US", {
-        timeZone: "UTC",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-
-      // rawDate used for sorting — prefer encounter date for chronological accuracy
-      const rawDate = hasValidEncounterDate
-        ? new Date(encounterDate).toISOString()
-        : record.created_at;
 
       if (data?.diagnoses) {
         data.diagnoses.forEach((d) => {
@@ -231,9 +212,9 @@ export default function SharedTimelineView({
   const selectedRecord = recordsWithData[selectedRecordIndex] ?? null;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-body antialiased">
+    <div className="clinical-shell text-slate-900 font-body antialiased">
       {/* ── Top Banner ─────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200/60 sticky top-0 z-40">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="font-bold tracking-[0.2em] text-slate-900 dark:text-white select-none">
@@ -266,12 +247,12 @@ export default function SharedTimelineView({
       <main className="max-w-5xl mx-auto px-6 py-8 flex flex-col gap-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-inner">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 ">
               <Stethoscope className="w-7 h-7 text-blue-600" />
             </div>
             <div>
-              <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+              <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                 {analyticsData.totalDiagnoses}
               </p>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">
@@ -280,12 +261,12 @@ export default function SharedTimelineView({
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 shadow-inner">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0 ">
               <Pill className="w-7 h-7 text-amber-600" />
             </div>
             <div>
-              <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+              <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                 {analyticsData.totalMedications}
               </p>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">
@@ -294,12 +275,12 @@ export default function SharedTimelineView({
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 flex items-center gap-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(6,81,237,0.1)] transition-all duration-300 hover:-translate-y-1">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 shadow-inner">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-5 shadow-none hover:border-slate-300 transition-all duration-300 hover:-translate-y-0.5">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0 ">
               <FlaskConical className="w-7 h-7 text-emerald-600" />
             </div>
             <div>
-              <p className="text-4xl font-semibold text-slate-800 tracking-tight leading-none">
+              <p className="text-4xl font-normal text-slate-800 tracking-tight leading-none">
                 {analyticsData.totalLabs}
               </p>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-widest mt-2">
@@ -354,8 +335,9 @@ export default function SharedTimelineView({
             {selectedRecord?.extracted_data && (
               <MedicalTimeline
                 data={selectedRecord.extracted_data as ExtractionData}
-                onItemClick={(box) => {
+                onItemClick={(box, sourcePage) => {
                   setActiveHighlight(box);
+                  setActiveSourcePage(sourcePage ?? 1);
                   setIsModalOpen(true);
                 }}
               />
@@ -410,14 +392,18 @@ export default function SharedTimelineView({
         onClose={() => setIsModalOpen(false)}
         pdfUrl={selectedRecord?.pdf_url ?? null}
         activeHighlight={activeHighlight}
+        activeSourcePage={activeSourcePage}
         extractionData={
           (selectedRecord?.extracted_data as ExtractionData) ?? null
         }
-        onItemClick={(box) => setActiveHighlight(box)}
+        onItemClick={(box, sourcePage) => {
+          setActiveHighlight(box);
+          setActiveSourcePage(sourcePage ?? 1);
+        }}
       />
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-200/60 bg-white mt-12">
+      <footer className="border-t border-slate-200 bg-white mt-12">
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-emerald-500" />

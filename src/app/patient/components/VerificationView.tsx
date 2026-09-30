@@ -17,7 +17,7 @@ import {
   Scan,
   ChevronRight,
   FileText,
-  PartyPopper,
+
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
@@ -50,6 +50,7 @@ interface VerificationItem {
   confidence: "High" | "Medium" | "Low";
   /** Bounding box for PDF highlighting */
   boundingBox: BoundingBox;
+  sourcePage: number;
   /** User who verified, undefined = unverified */
   verified_by?: string;
   /** Parent record ID for the RPC call */
@@ -148,6 +149,7 @@ const CATEGORY_META: Record<string, {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  documentDates: "Document Date",
   diagnoses: "Diagnosis",
   medications: "Medication",
   labResults: "Lab Result",
@@ -156,64 +158,116 @@ const CATEGORY_LABELS: Record<string, string> = {
   vitals: "Vital",
   physicians: "Physician",
   icdCodes: "ICD Code",
+  cptCodes: "CPT / HCPCS Code",
+  familyHistory: "Family History",
+  socialHistory: "Social History",
   imagingFindings: "Imaging",
+  pathologyFindings: "Pathology",
+  symptoms: "Symptom",
+  chronicDiseaseIndicators: "Chronic Disease",
+  vaccinations: "Vaccination",
+  facilities: "Facility",
+  insuranceDetails: "Insurance",
+  emergencyContacts: "Emergency Contact",
+  followUpRecommendations: "Follow-up",
+  pregnancyStatus: "Pregnancy Status",
+  dischargeDetails: "Discharge",
+  referralRecommendations: "Referral",
 };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getItemName(category: string, item: Record<string, unknown>): string {
-  switch (category) {
-    case "diagnoses": return (item.name as string) || "Unknown";
-    case "medications": return (item.name as string) || "Unknown";
-    case "labResults": return (item.testName as string) || "Unknown";
-    case "allergies": return (item.allergen as string) || "Unknown";
-    case "procedures": return (item.name as string) || "Unknown";
-    case "vitals": return (item.measurement as string) || "Unknown";
-    case "physicians": return (item.name as string) || "Unknown";
-    case "icdCodes": return (item.code as string) || "Unknown";
-    case "imagingFindings": return (item.bodyPart as string) || "Unknown";
-    default: return "Unknown";
+function firstText(item: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === "string" && value.trim()) return value;
   }
+  return "Unknown";
+}
+
+function getItemName(_category: string, item: Record<string, unknown>): string {
+  return firstText(item, [
+    "name",
+    "testName",
+    "allergen",
+    "measurement",
+    "code",
+    "finding",
+    "symptom",
+    "condition",
+    "vaccine",
+    "hospitalName",
+    "provider",
+    "recommendation",
+    "status",
+    "diagnosis",
+    "specialty",
+    "date",
+    "category",
+  ]);
 }
 
 function getItemDetail(category: string, item: Record<string, unknown>): string | undefined {
-  switch (category) {
-    case "medications": {
-      const parts = [item.dosage, item.frequency].filter(Boolean);
-      return parts.length > 0 ? parts.join(" · ") : undefined;
-    }
-    case "labResults": {
-      const v = item.value as string;
-      const u = item.unit as string;
-      return v ? `${v}${u ? ` ${u}` : ""}` : undefined;
-    }
-    case "allergies": {
-      const parts = [item.reaction, item.severity].filter(Boolean);
-      return parts.length > 0 ? parts.join(" · ") : undefined;
-    }
-    case "procedures": {
-      const parts = [item.date, item.body_part].filter(Boolean);
-      return parts.length > 0 ? parts.join(" · ") : undefined;
-    }
-    case "vitals": {
-      const v = item.value as string;
-      const u = item.unit as string;
-      return v ? `${v}${u ? ` ${u}` : ""}` : undefined;
-    }
-    case "physicians": return item.specialty as string | undefined;
-    case "icdCodes": return item.description as string | undefined;
-    case "imagingFindings": return item.finding as string | undefined;
-    default: return undefined;
-  }
+  const keysByCategory: Record<string, string[]> = {
+    documentDates: ["dateType"],
+    medications: ["dosage", "frequency", "duration", "adherenceClues"],
+    labResults: ["value", "unit", "referenceRange"],
+    allergies: ["reaction", "severity"],
+    procedures: ["date", "body_part"],
+    vitals: ["value", "unit", "date"],
+    physicians: ["role", "specialty"],
+    icdCodes: ["description"],
+    cptCodes: ["description"],
+    familyHistory: ["relative"],
+    socialHistory: ["status", "details"],
+    imagingFindings: ["finding"],
+    pathologyFindings: ["specimen", "interpretation"],
+    symptoms: ["onset", "duration", "status"],
+    chronicDiseaseIndicators: ["status", "indicator"],
+    vaccinations: ["date", "dose"],
+    facilities: ["department"],
+    insuranceDetails: ["policyNumber", "memberId"],
+    emergencyContacts: ["relationship", "phone"],
+    followUpRecommendations: ["timeframe"],
+    pregnancyStatus: ["gestationalAge", "estimatedDueDate"],
+    dischargeDetails: ["disposition", "instructions"],
+    referralRecommendations: ["reason", "referredTo"],
+  };
+  const values = (keysByCategory[category] ?? [])
+    .map((key) => item[key])
+    .filter((value): value is string => typeof value === "string" && Boolean(value));
+  return values.length ? values.join(" | ") : undefined;
 }
 
-// Categories to flatten (all that have confidence + boundingBox)
 const VERIFIABLE_CATEGORIES = [
-  "diagnoses", "medications", "labResults", "allergies", "procedures",
-  "vitals", "physicians", "icdCodes", "imagingFindings",
+  "documentDates",
+  "diagnoses",
+  "medications",
+  "labResults",
+  "allergies",
+  "procedures",
+  "vitals",
+  "physicians",
+  "icdCodes",
+  "cptCodes",
+  "familyHistory",
+  "socialHistory",
+  "imagingFindings",
+  "pathologyFindings",
+  "symptoms",
+  "chronicDiseaseIndicators",
+  "vaccinations",
+  "facilities",
+  "insuranceDetails",
+  "emergencyContacts",
+  "followUpRecommendations",
+  "pregnancyStatus",
+  "dischargeDetails",
+  "referralRecommendations",
 ];
+
 
 // ---------------------------------------------------------------------------
 // Component
@@ -226,6 +280,7 @@ export default function VerificationView({
 }: VerificationViewProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [activeHighlight, setActiveHighlight] = useState<BoundingBox | null>(null);
+  const [activeSourcePage, setActiveSourcePage] = useState(1);
   const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -256,6 +311,7 @@ export default function VerificationView({
               detail: getItemDetail(category, item),
               confidence: confidence || "Medium",
               boundingBox: item.boundingBox as BoundingBox,
+              sourcePage: Math.max(1, Number(item.sourcePage) || 1),
               verified_by: verifiedBy,
               recordId: record.id,
               pdfUrl: record.pdf_url || null,
@@ -272,6 +328,7 @@ export default function VerificationView({
   const handleFactClick = useCallback((item: VerificationItem) => {
     setSelectedKey(item.key);
     setActiveHighlight(item.boundingBox);
+    setActiveSourcePage(item.sourcePage);
     setActivePdfUrl(item.pdfUrl);
   }, []);
 
@@ -376,19 +433,19 @@ export default function VerificationView({
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-5rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* ═══════ Left Panel: Verification Queue ═══════ */}
-      <div className="w-[42%] h-full overflow-y-auto border-r border-slate-200/60 bg-slate-50/30 p-6">
+    <div className="review-workspace">
+      {/* ═══════ Left Panel: Review your records ═══════ */}
+      <div className="review-queue">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-200">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-none">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800 tracking-tight">Verification Queue</h2>
             <p className="text-xs text-slate-500 mt-0.5">
               {verificationQueue.length === 0
-                ? "All facts verified"
+                ? (records.length ? "No items awaiting review" : "Add a record to get started")
                 : `${verificationQueue.length} item${verificationQueue.length === 1 ? "" : "s"} need${verificationQueue.length === 1 ? "s" : ""} review`}
             </p>
           </div>
@@ -402,16 +459,16 @@ export default function VerificationView({
             transition={{ duration: 0.5, type: "spring" }}
             className="flex flex-col items-center justify-center py-20 px-6 text-center"
           >
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center mb-6 shadow-inner">
-              <PartyPopper className="w-10 h-10 text-emerald-500" />
+            <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6 ">
+              <FileText className="w-10 h-10 text-slate-500" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 tracking-tight">All Clear!</h3>
+            <h3 className="text-lg font-bold text-slate-800 tracking-tight">{records.length ? "Nothing awaiting review." : "Your review starts here."}</h3>
             <p className="text-sm text-slate-500 mt-2 max-w-xs leading-relaxed">
-              Every AI-extracted fact has been verified by a human. Your audit trail is complete.
+              {records.length ? "There are no unreviewed extracted facts in the available records." : "Upload a medical PDF from Overview. Its extracted facts will appear here, alongside the source document."}
             </p>
             <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">100% Verified</span>
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">{records.length ? "Review queue empty" : "No records yet"}</span>
             </div>
           </motion.div>
         ) : (
@@ -433,15 +490,18 @@ export default function VerificationView({
                     exit={{ opacity: 0, x: -30, scale: 0.95, transition: { duration: 0.25 } }}
                     transition={{ delay: Math.min(i * 0.03, 0.3), duration: 0.35 }}
                     onClick={() => handleFactClick(item)}
+                    tabIndex={0}
+                    aria-label={"View source for " + item.name}
+                    onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); handleFactClick(item); } }}
                     className={`relative p-4 rounded-2xl border cursor-pointer transition-all duration-200 group ${
                       isSelected
-                        ? `border-violet-400 bg-violet-50/60 shadow-[0_0_0_1px_rgba(139,92,246,0.5)] ring-2 ring-violet-200/50`
+                        ? `border-slate-400 bg-slate-50 ring-1 ring-slate-300`
                         : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm hover:-translate-y-0.5"
                     } ${isLoading ? "opacity-60 pointer-events-none" : ""}`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Category icon */}
-                      <div className={`w-9 h-9 rounded-lg ${meta.bgClass} flex items-center justify-center shrink-0 shadow-inner border ${meta.borderClass}`}>
+                      <div className={`w-9 h-9 rounded-lg ${meta.bgClass} flex items-center justify-center shrink-0  border ${meta.borderClass}`}>
                         <Icon className={`w-4 h-4 ${meta.colorClass}`} />
                       </div>
 
@@ -491,11 +551,12 @@ export default function VerificationView({
       </div>
 
       {/* ═══════ Right Panel: PDF Viewer ═══════ */}
-      <div className="w-[58%] h-full bg-slate-100/50 flex flex-col relative overflow-hidden">
+      <div className="review-source-panel">
         {activePdfUrl ? (
           <PdfViewer
             pdfUrl={activePdfUrl}
             activeHighlight={activeHighlight}
+            activePage={activeSourcePage}
             onClearHighlight={() => {
               setActiveHighlight(null);
               setSelectedKey(null);

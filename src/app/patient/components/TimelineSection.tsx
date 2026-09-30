@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Check, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 
 export interface TimelineEvent {
   date: string;
@@ -11,84 +11,19 @@ export interface TimelineEvent {
   source: string;
   citation: string;
 }
-
-export interface TimelineSectionProps {
-  events: TimelineEvent[];
-  showHeader?: boolean;
-}
+export interface TimelineSectionProps { events: TimelineEvent[]; showHeader?: boolean; }
 
 export default function TimelineSection({ events, showHeader = true }: TimelineSectionProps) {
   return (
-    <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.5 }}
-      className="mt-4"
-    >
-      {showHeader && (
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <h2 className="text-headline-md text-on-surface">
-              Recent Verified Events
-            </h2>
-            <p className="text-body-sm text-on-surface-variant mt-1">
-              Extracted facts mapped from your uploaded documents.
-            </p>
-          </div>
-          <a
-            className="text-body-sm font-semibold text-primary hover:underline cursor-pointer"
-            href="#"
-          >
-            View Full Timeline
-          </a>
-        </div>
-      )}
-
-      {/* Timeline */}
-      <div className="flex flex-col gap-3 relative before:absolute before:inset-y-0 before:left-[4.5rem] before:w-px before:bg-document-border">
-        {events.map((event, i) => (
-          <motion.div
-            key={`${event.date}-${event.category}-${i}`}
-            initial={{ x: -15, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.6 + i * 0.15 }}
-            className="flex gap-6 items-start relative z-10 group"
-          >
-            {/* Date */}
-            <div className="w-16 pt-1 text-right shrink-0">
-              <span className="text-citation-code text-on-surface-variant">
-                {event.date}
-              </span>
-            </div>
-
-            {/* Status Node */}
-            <div className="w-4 h-4 rounded-full bg-surface border-2 border-clinical-verified flex items-center justify-center shrink-0 mt-1.5 shadow-[0_0_0_4px_#faf8ff]">
-              <Check className="w-2.5 h-2.5 text-clinical-verified" strokeWidth={3} />
-            </div>
-
-            {/* Card Content */}
-            <div className="flex-1 bg-surface border border-document-border rounded-xl p-4 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow duration-200">
-              <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
-                <span
-                  className={`px-2 py-0.5 rounded text-label-caps ${event.categoryColor}`}
-                >
-                  {event.category}
-                </span>
-                <button className="px-2 py-1 bg-citation-highlight/30 border border-citation-border rounded flex items-center gap-1 text-on-surface hover:bg-citation-highlight/50 transition-colors cursor-pointer">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="text-citation-code">{event.citation}</span>
-                </button>
-              </div>
-              <p className="text-body-main text-on-surface font-semibold mb-1">
-                {event.fact}
-              </p>
-              <p className="text-body-sm text-on-surface-variant">
-                Extracted from: {event.source}
-              </p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </motion.div>
+    <section className="health-timeline" aria-label="Health timeline">
+      {showHeader && <div className="timeline-heading"><p className="eyebrow">A connected history</p><h2>Your health timeline</h2><p>Details from your uploaded documents, in order.</p></div>}
+      <div className="timeline-list">{events.map((event, index) => (
+        <motion.article key={event.date + event.category + index} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.24) }} className="timeline-entry">
+          <div className="timeline-date">{event.date}</div>
+          <span className="timeline-node" aria-hidden="true" />
+          <div className="timeline-detail"><div className="timeline-category">{event.category.toLowerCase()}</div><h3>{event.fact}</h3><p>{event.citation}</p><span className="timeline-source"><FileText size={12} />{event.source === "Master Timeline" ? "From your uploaded records" : event.source}</span></div>
+        </motion.article>
+      ))}</div>
+    </section>
   );
 }

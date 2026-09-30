@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, FolderOpen, RefreshCw, Users } from "lucide-react";
 
@@ -55,56 +55,63 @@ export default function DoctorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
 
-  const loadRecords = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError) {
-      setError(userError.message);
-      setRecords([]);
-      setIsLoading(false);
-      return;
-    }
-
-    if (!user) {
-      setError("Unable to identify the signed-in doctor.");
-      setRecords([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const clinicId = user.user_metadata?.clinic_id;
-    let query = supabase
-      .from("medical_records")
-      .select("id, user_id, created_at, extracted_data")
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (typeof clinicId === "string" && clinicId.length > 0) {
-      query = query.eq("clinic_id", clinicId);
-    }
-
-    const { data, error: recordsError } = await query;
-
-    if (recordsError) {
-      setError(recordsError.message);
-      setRecords([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setRecords((data ?? []) as MedicalRecord[]);
-    setIsLoading(false);
-  }, []);
-
   useEffect(() => {
+    let isCancelled = false;
+
+    const loadRecords = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (isCancelled) return;
+
+      if (userError) {
+        setError(userError.message);
+        setRecords([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!user) {
+        setError("Unable to identify the signed-in doctor.");
+        setRecords([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const clinicId = user.user_metadata?.clinic_id;
+      let query = supabase
+        .from("medical_records")
+        .select("id, user_id, created_at, extracted_data")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (typeof clinicId === "string" && clinicId.length > 0) {
+        query = query.eq("clinic_id", clinicId);
+      }
+
+      const { data, error: recordsError } = await query;
+
+      if (isCancelled) return;
+
+      if (recordsError) {
+        setError(recordsError.message);
+        setRecords([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setRecords((data ?? []) as MedicalRecord[]);
+      setIsLoading(false);
+    };
+
     void loadRecords();
-  }, [loadRecords]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const patientRows = useMemo<PatientRow[]>(() => {
     const recordsByPatient = new Map<string, MedicalRecord[]>();
@@ -159,7 +166,7 @@ export default function DoctorDashboard() {
   }, [records]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-950 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-900 sm:px-8 lg:px-12">
       <div className="mx-auto w-full max-w-7xl">
         <header className="mb-8">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
@@ -229,7 +236,7 @@ export default function DoctorDashboard() {
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Patient ID
                     </p>
-                    <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-950">
+                    <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-900">
                       {formatPatientId(patient.userId)}
                     </p>
                   </div>
